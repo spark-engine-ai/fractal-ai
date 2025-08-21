@@ -49,7 +49,7 @@ npm install
 Create a `.env` file in the root directory:
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
-PORT=3006
+PORT=3000
 ```
 
 ### 3. Build Tailwind CSS
