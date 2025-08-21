@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Engine - AI Cognitive Intelligence</title>
+    <link href="./styles/output.css" rel="stylesheet">
+</head>
+<body class="bg-fractal-dark text-white h-screen overflow-hidden">
+    <div class="h-full flex">
+        <!-- Left Sidebar - Controls -->
+        <div class="w-80 bg-fractal-gray border-r border-gray-600 p-6 overflow-y-auto">
+<div class="flex items-center mb-6 gap-4">
+  <img src="./images/logo.PNG" alt="Fractal Engine Logo" width="24" height="24" class="rounded">
+  <h1 class="text-md font-bold text-white" style="transform: translateX(5px)">Fractal Engine</h1>
+</div>
+
+
+            
+            <!-- Session Controls -->
+            <div class="control-panel mb-6">
+                <h2 class="text-lg font-semibold mb-4">Session</h2>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Goal</label>
+                    <input type="text" id="goalInput" 
+                           placeholder="General AI assistance"
+                           class="w-full p-2 bg-fractal-dark border border-gray-500 rounded text-white">
+                </div>
+                <button id="newSessionBtn" class="btn-primary w-full">New Session</button>
+            </div>
+
+            <!-- Fractal Controls -->
+            <div class="control-panel mb-6">
+                <h2 class="text-lg font-semibold mb-4">Fractal Parameters</h2>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">
+                        Depth: <span id="depthValue">3</span>
+                    </label>
+                    <input type="range" id="depthSlider" min="1" max="8" value="3"
+                           class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>1</span><span>8</span>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">
+                        Length: <span id="lengthValue">3</span>
+                    </label>
+                    <input type="range" id="lengthSlider" min="1" max="8" value="3"
+                           class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>1</span><span>8</span>
+                    </div>
+                </div>
+                
+                <div class="text-sm text-gray-400">
+                    <p>Total Agents: <span id="agentCount">13</span></p>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="control-panel">
+                <h2 class="text-lg font-semibold mb-4">Status</h2>
+                <div id="statusDisplay" class="text-sm text-gray-400">
+                    Ready to start
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col h-full overflow-hidden">
+            <!-- Top Bar -->
+            <div class="bg-fractal-gray border-b border-gray-600 p-4 flex-shrink-0">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-semibold">Cognitive Interface</h2>
+                    <div class="flex space-x-4">
+                        <button id="chatTabBtn" class="btn-secondary active">Chat</button>
+                        <button id="consoleTabBtn" class="btn-secondary">Console</button>
+                        <button id="toggleViewBtn" class="btn-secondary">3D View</button>
+                        <button id="clearChatBtn" class="btn-secondary">Clear Chat</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Interface -->
+            <div id="chatView" class="flex-1 flex flex-col">
+                <div id="chatMessages" class="overflow-y-auto p-6 space-y-4" style="height: 75vh;">
+                    <!-- Welcome Screen - Will be replaced when session starts -->
+                    <div id="welcomeScreen" class="flex flex-col items-center justify-center h-full text-center">
+                        <div class="flex items-center align-center justify-center mb-6 gap-4">
+
+                        <img src="./images/logo.PNG" style="transform:translateX(-7.5px)" alt="Fractal Engine Logo" width="44" height="44" class="rounded-lg shadow-lg">
+                        <h1 style="font-size: 30px;" class="font-bold text-white">Fractal Engine</h1>
+                        </div>
+                        <div style="height:0.5px;opacity:0.5;background-color:white;width:20vw;margin-bottom:12px;"></div>
+                        <p class="text-md text-gray-300 mb-2">AI-Powered Cognitive Intelligence</p>
+                        <p class="text-gray-400 text-sm mb-8 max-w-md text-center w-80" style="text-align:center" >Experience recursive AI reasoning through fractal agent processing. Set your parameters and create a new session to begin.</p>
+                    </div>
+                </div>
+
+                <!-- Chat Input -->
+                <div class="border-t border-gray-600 p-4">
+                    <div class="flex space-x-4">
+                        <input type="text" id="chatInput" 
+                               placeholder="Ask me anything..."
+                               class="flex-1 p-3 bg-fractal-gray border border-gray-500 rounded-lg text-white">
+                        <button id="sendBtn" class="btn-primary px-6">Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Console Interface -->
+            <div id="consoleView" class="flex-1 flex flex-col hidden">
+                <div class="overflow-y-auto p-6" style="height: 75vh;">
+                    <div id="consoleContent" class="space-y-6">
+                        <div class="text-gray-400 text-center py-8">
+                            <p>Console logs will appear here when fractal processing occurs.</p>
+                            <p class="text-sm mt-2">Execute a complex query to see the fractal system in action.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-t border-gray-600 p-4">
+                    <button id="clearConsoleBtn" class="btn-secondary">Clear Console</button>
+                </div>
+            </div>
+
+            <!-- Node Graph View -->
+            <div id="nodeView" class="flex-1 hidden">
+                <div class="h-full bg-fractal-dark relative overflow-hidden">
+                    <canvas id="nodeCanvas" class="w-full h-full"></canvas>
+                    <div id="nodeInfo" class="absolute top-4 left-4 bg-fractal-gray rounded-lg border border-gray-600 max-w-sm transition-all duration-300 z-10">
+                        <div class="flex items-center justify-between p-3 cursor-pointer" id="nodeInfoHeader">
+                            <h3 class="font-semibold text-sm pr-4 mr-4">Agent Fractal Info  </h3>
+                            <button id="toggleInfoBtn" class="text-gray-400 hover:text-white text-lg pl-4 leading-none">▾</button>
+                        </div>
+                        <div id="nodeInfoContent" class="p-4">
+                            <p class="text-sm text-gray-400">Interactive visualization will appear here when processing queries.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-fractal-gray p-6 rounded-lg border border-gray-600">
+            <div class="flex items-center space-x-3">
+                <div class="animate-spin-slow w-6 h-6 border-2 border-fractal-blue border-t-transparent rounded-full"></div>
+                <span>Processing through fractal layers...</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Removed external markdown library - using custom parser -->
+    <script src="./js/app.js"></script>
+</body>
+</html>

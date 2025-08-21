@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-fractal-dark text-white font-mono;
+  }
+}
+
+@layer components {
+  .node {
+    @apply bg-fractal-gray border border-gray-600 rounded-lg p-4 shadow-lg;
+    transition: all 0.3s ease;
+  }
+  
+  .node:hover {
+    @apply border-fractal-blue shadow-xl;
+  }
+  
+  .node-active {
+    @apply border-fractal-purple bg-opacity-20 bg-fractal-purple;
+  }
+  
+  .chat-bubble {
+    @apply bg-fractal-gray rounded-lg p-4 mb-4 border-l-4;
+  }
+  
+  .chat-bubble.user {
+    @apply border-fractal-blue;
+  }
+  
+  .chat-bubble.agent {
+    @apply border-fractal-green;
+  }
+  
+  .control-panel {
+    @apply bg-fractal-gray border border-gray-600 rounded-lg p-4;
+  }
+  
+  .btn-primary {
+    @apply bg-fractal-blue hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-fractal-gray hover:bg-gray-600 text-white px-4 py-2 rounded-lg border border-gray-500 transition-colors;
+  }
+  
+  .btn-secondary.active {
+    @apply bg-fractal-blue border-fractal-blue;
+  }
+  
+  /* Markdown content styling */
+  .chat-bubble h1, .chat-bubble h2, .chat-bubble h3 {
+    @apply font-bold mb-2;
+  }
+  
+  .chat-bubble h1 { @apply text-lg; }
+  .chat-bubble h2 { @apply text-base; }
+  .chat-bubble h3 { @apply text-sm; }
+  
+  .chat-bubble p {
+    @apply mb-2;
+  }
+  
+  .chat-bubble ul, .chat-bubble ol {
+    @apply ml-4 mb-2;
+  }
+  
+  .chat-bubble li {
+    @apply mb-1;
+  }
+  
+  .chat-bubble code {
+    @apply bg-gray-800 px-1 rounded text-fractal-blue;
+  }
+  
+  .chat-bubble pre {
+    @apply bg-gray-800 p-2 rounded mb-2 overflow-x-auto;
+  }
+  
+  .chat-bubble blockquote {
+    @apply border-l-2 border-gray-500 pl-2 italic;
+  }
+}
