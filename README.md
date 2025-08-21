@@ -1,10 +1,8 @@
 # Fractal Engine - AI Cognitive Intelligence
 
-![Fractal Engine Logo](./public/images/logo.png)
+![Fractal Engine Interface](./public/images/prev-1.png)
 
 ### AI-Powered Cognitive Intelligence Through Fractal Agent Processing
-
-![Fractal Engine Interface](./public/images/prev-1.png)
 
 A recursive fractal-based AI engine that implements cognitive intelligence through layered agent processing. Built on the principles of fractal reasoning, this system creates emergent intelligence by decomposing complex tasks into specialized sub-agents that work collaboratively to provide comprehensive responses.
 
