@@ -1,10 +1,10 @@
 # Fractal Engine - AI Cognitive Intelligence
 
-![Fractal Engine Logo](./public/images/logo.PNG)
+![Fractal Engine Logo](./public/images/logo.png)
 
 ### AI-Powered Cognitive Intelligence Through Fractal Agent Processing
 
-![Fractal Engine Interface](./public/images/prev-1.PNG)
+![Fractal Engine Interface](./public/images/prev-1.png)
 
 A recursive fractal-based AI engine that implements cognitive intelligence through layered agent processing. Built on the principles of fractal reasoning, this system creates emergent intelligence by decomposing complex tasks into specialized sub-agents that work collaboratively to provide comprehensive responses.
 
@@ -89,7 +89,7 @@ Open your browser to `http://localhost:3006`
 - **Console**: Detailed logs of fractal execution when triggered
 - **3D View**: Interactive visualization of the agent processing tree
 
-![Chat Interface](./public/images/prev-2.JPG)
+![Chat Interface](./public/images/prev-2.jpg)
 *Clean chat interface with markdown rendering and real-time processing*
 
 ### Example Interaction Flow:
@@ -120,7 +120,7 @@ Root Agent: Synthesizes all perspectives into comprehensive response
 - Simple queries receive direct responses for efficiency
 - Agent count is dynamic based on actual task complexity
 
-![Console Agent Layers](./public/images/prev-3.JPG)
+![Console Agent Layers](./public/images/prev-3.jpg)
 *Console view showing detailed agent execution across fractal layers*
 
 ## 🎨 Technology Stack
