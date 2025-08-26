@@ -69,6 +69,7 @@ class FractalEngine {
     this.sessions = new Map();
     this.executionTrees = new Map();
     this.executionLogs = new Map();
+    this.activeExecutions = new Map(); // Track real-time execution
   }
 
   createSession(goal = "General AI assistance") {
@@ -77,52 +78,236 @@ class FractalEngine {
     return sessionId;
   }
 
-  async processQuery(sessionId, query, maxDepth = 3, maxBranching = 3) {
+  async processQuery(sessionId, query, maxDepth = 3, maxBranching = 3, modifier = 'flat', apiKey = null) {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error('Session not found');
 
-    console.log(`Processing query with max depth: ${maxDepth}, max branching: ${maxBranching}`);
+    console.log(`Processing query with max depth: ${maxDepth}, max branching: ${maxBranching}, modifier: ${modifier}`);
     
-    // Create execution tree
-    const executionTree = {
-      id: uuidv4(),
-      layer: 0,
-      position: 0,
-      query: query,
-      response: null,
-      children: []
-    };
-    
+    // Create execution tree with all possible nodes (not just executed ones)
+    const executionTree = this.createFullTree(maxDepth, maxBranching, modifier, query);
     this.executionTrees.set(sessionId, executionTree);
 
-    // Initialize execution log
-    const executionLog = {
+    // Initialize execution tracking
+    const executionTracking = {
       sessionId,
       timestamp: new Date().toISOString(),
       query,
       maxDepth,
       maxBranching,
+      totalPossibleAgents: this.calculateTotalAgents(maxDepth, maxBranching, modifier),
+      executedAgents: 0,
       agents: [],
-      fractalUsed: false
+      fractalUsed: false,
+      executionPath: [], // Track which nodes actually executed
+      currentlyExecuting: null
     };
     
-    this.executionLogs.set(sessionId, executionLog);
+    this.executionLogs.set(sessionId, executionTracking);
+    this.activeExecutions.set(sessionId, executionTracking);
+
+    // Use provided API key or fallback to environment
+    const openaiClient = apiKey ? new OpenAI({ apiKey }) : openai;
 
     // Start with root GPT agent
-    const response = await this.executeRootAgent(query, session.goal, maxDepth, maxBranching, executionTree, executionLog);
+    const response = await this.executeRootAgent(
+      query, session.goal, maxDepth, maxBranching, 
+      executionTree, executionTracking, openaiClient
+    );
     
     return {
       response: response,
       tree: executionTree,
       depth: maxDepth,
       length: maxBranching,
-      executionLog: executionLog.fractalUsed ? executionLog : null
+      executionLog: executionTracking.fractalUsed ? executionTracking : null,
+      executedAgents: executionTracking.executedAgents,
+      totalPossibleAgents: executionTracking.totalPossibleAgents
     };
   }
 
-  async executeRootAgent(query, goal, maxDepth, maxBranching, treeNode, executionLog) {
+  createFullTree(maxDepth, maxBranching, modifier, rootQuery) {
+    // Calculate the number of children for each layer based on modifier
+    const layerChildCounts = this.calculateModifierChildCounts(maxDepth, maxBranching, modifier);
+    
+    const createNode = (layer, position, parentPath = []) => {
+      const nodePath = [...parentPath, position];
+      const childrenCount = layer < maxDepth - 1 ? layerChildCounts[layer + 1] : 0;
+      
+      return {
+        id: uuidv4(),
+        layer,
+        position,
+        path: nodePath,
+        query: layer === 0 ? rootQuery : null,
+        response: null,
+        executed: false,
+        currentlyExecuting: false,
+        children: childrenCount > 0 ? 
+          Array.from({ length: childrenCount }, (_, i) => 
+            createNode(layer + 1, i, nodePath)
+          ) : []
+      };
+    };
+
+    return createNode(0, 0);
+  }
+
+  calculateTotalAgents(depth, branching, modifier = 'flat') {
+    const layerCounts = this.calculateModifierLayerCounts(depth, branching, modifier);
+    return layerCounts.reduce((sum, count) => sum + count, 0);
+  }
+
+  calculateModifierLayerCounts(depth, length, modifier) {
+    const layerCounts = [];
+    
+    switch (modifier) {
+      case 'flat':
+        for (let layer = 0; layer < depth; layer++) {
+          layerCounts.push(Math.pow(length, layer));
+        }
+        break;
+        
+      case 'subtract':
+        // Starts at base length, decreases each layer to 1
+        for (let layer = 0; layer < depth; layer++) {
+          if (layer === 0) {
+            layerCounts.push(1); // Root layer
+          } else {
+            const agentsInLayer = Math.max(1, Math.round(length - ((length - 1) * (layer - 1) / (depth - 2))));
+            const parentCount = layerCounts[layer - 1];
+            layerCounts.push(parentCount * agentsInLayer);
+          }
+        }
+        break;
+        
+      case 'add':
+        // Starts small, increases to base length in final layer
+        for (let layer = 0; layer < depth; layer++) {
+          if (layer === 0) {
+            layerCounts.push(1); // Root layer
+          } else {
+            const agentsInLayer = Math.max(1, Math.round(1 + ((length - 1) * (layer - 1) / (depth - 2))));
+            const parentCount = layerCounts[layer - 1];
+            layerCounts.push(parentCount * agentsInLayer);
+          }
+        }
+        break;
+        
+      case 'shrink_divided':
+        // First layer = base length, each layer = base / layer number
+        for (let layer = 0; layer < depth; layer++) {
+          if (layer === 0) {
+            layerCounts.push(1); // Root layer
+          } else {
+            const agentsInLayer = Math.max(1, Math.round(length / layer));
+            const parentCount = layerCounts[layer - 1];
+            layerCounts.push(parentCount * agentsInLayer);
+          }
+        }
+        break;
+        
+      case 'grow_divided':
+        // Opposite of shrink_divided, ending at base length
+        for (let layer = 0; layer < depth; layer++) {
+          if (layer === 0) {
+            layerCounts.push(1); // Root layer
+          } else {
+            const reverseLayer = depth - layer;
+            const agentsInLayer = layer === depth - 1 ? length : Math.max(1, Math.round(length / reverseLayer));
+            const parentCount = layerCounts[layer - 1];
+            layerCounts.push(parentCount * agentsInLayer);
+          }
+        }
+        break;
+        
+      default:
+        // Fallback to flat
+        for (let layer = 0; layer < depth; layer++) {
+          layerCounts.push(Math.pow(length, layer));
+        }
+    }
+    
+    return layerCounts;
+  }
+
+  calculateModifierChildCounts(depth, length, modifier) {
+    const childCounts = [];
+    
+    switch (modifier) {
+      case 'flat':
+        for (let layer = 0; layer < depth; layer++) {
+          childCounts.push(length);
+        }
+        break;
+        
+      case 'subtract':
+        // Starts at base length, decreases each layer to 1
+        for (let layer = 0; layer < depth; layer++) {
+          if (layer === 0) {
+            childCounts.push(length);
+          } else {
+            const agentsInLayer = Math.max(1, Math.round(length - ((length - 1) * (layer - 1) / (depth - 2))));
+            childCounts.push(agentsInLayer);
+          }
+        }
+        break;
+        
+      case 'add':
+        // Starts small, increases to base length in final layer
+        for (let layer = 0; layer < depth; layer++) {
+          if (layer === 0) {
+            const agentsInLayer = depth > 2 ? 1 : length;
+            childCounts.push(agentsInLayer);
+          } else {
+            const agentsInLayer = Math.max(1, Math.round(1 + ((length - 1) * (layer - 1) / (depth - 2))));
+            childCounts.push(agentsInLayer);
+          }
+        }
+        break;
+        
+      case 'shrink_divided':
+        // First layer = base length, each layer = base / layer number
+        for (let layer = 0; layer < depth; layer++) {
+          if (layer === 0) {
+            childCounts.push(length);
+          } else {
+            const agentsInLayer = Math.max(1, Math.round(length / (layer + 1)));
+            childCounts.push(agentsInLayer);
+          }
+        }
+        break;
+        
+      case 'grow_divided':
+        // Opposite of shrink_divided, ending at base length
+        for (let layer = 0; layer < depth; layer++) {
+          if (layer === depth - 1) {
+            childCounts.push(0); // Last layer has no children
+          } else {
+            const reverseLayer = depth - layer - 1;
+            const agentsInLayer = layer === depth - 2 ? length : Math.max(1, Math.round(length / reverseLayer));
+            childCounts.push(agentsInLayer);
+          }
+        }
+        break;
+        
+      default:
+        // Fallback to flat
+        for (let layer = 0; layer < depth; layer++) {
+          childCounts.push(length);
+        }
+    }
+    
+    return childCounts;
+  }
+
+  async executeRootAgent(query, goal, maxDepth, maxBranching, treeNode, executionTracking, openaiClient) {
     try {
-      const completion = await openai.chat.completions.create({
+      // Mark this node as currently executing
+      treeNode.currentlyExecuting = true;
+      executionTracking.currentlyExecuting = treeNode.path;
+      
+      const completion = await openaiClient.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
@@ -153,33 +338,45 @@ Each subtask should be specific and focused on a different aspect of the problem
         const args = JSON.parse(message.function_call.arguments);
         console.log(`Root agent delegating ${args.tasks.length} tasks: ${args.reason}`);
         
-        // Mark as fractal execution
-        executionLog.fractalUsed = true;
-        executionLog.summary = `Root agent delegated to ${args.tasks.length} specialized agents: ${args.reason}`;
+        // Mark as fractal execution and track execution
+        executionTracking.fractalUsed = true;
+        executionTracking.summary = `Root agent delegated to ${args.tasks.length} specialized agents: ${args.reason}`;
+        
+        // Mark root node as executed
+        treeNode.executed = true;
+        treeNode.currentlyExecuting = false;
+        executionTracking.executedAgents++;
+        executionTracking.executionPath.push(treeNode.path);
         
         // Log root agent
-        executionLog.agents.push({
+        executionTracking.agents.push({
           layer: 0,
           position: 0,
           type: 'root',
+          path: treeNode.path,
           task: { subtask: query, focus: 'Main user query' },
           response: `Delegating to ${args.tasks.length} agents: ${args.reason}`,
           delegated: true
         });
         
         const childResults = await this.executeFractalLayer(
-          args.tasks, goal, 1, maxDepth, maxBranching, treeNode, executionLog
+          args.tasks, goal, 1, maxDepth, maxBranching, treeNode, executionTracking, openaiClient
         );
         
         // Synthesize results back to user
-        const finalResponse = await this.synthesizeResults(childResults, query, goal, executionLog);
+        const finalResponse = await this.synthesizeResults(childResults, query, goal, executionTracking, openaiClient);
         treeNode.response = finalResponse;
         
         return finalResponse;
       } else {
-        // Direct response
+        // Direct response - mark as executed
         const directResponse = message.content;
+        treeNode.executed = true;
+        treeNode.currentlyExecuting = false;
         treeNode.response = directResponse;
+        executionTracking.executedAgents++;
+        executionTracking.executionPath.push(treeNode.path);
+        
         console.log("Root agent responding directly");
         return directResponse;
       }
@@ -192,30 +389,29 @@ Each subtask should be specific and focused on a different aspect of the problem
     }
   }
 
-  async executeFractalLayer(tasks, goal, currentLayer, maxDepth, maxBranching, parentNode, executionLog) {
+  async executeFractalLayer(tasks, goal, currentLayer, maxDepth, maxBranching, parentNode, executionTracking, openaiClient) {
     console.log(`Executing layer ${currentLayer} with ${tasks.length} tasks`);
     
     const childPromises = tasks.slice(0, maxBranching).map(async (task, index) => {
-      const childNode = {
-        id: uuidv4(),
-        layer: currentLayer,
-        position: index,
-        query: task.subtask,
-        focus: task.focus,
-        response: null,
-        children: []
-      };
+      // Find the corresponding child node in the pre-built tree
+      const childNode = parentNode.children[index];
+      if (!childNode) {
+        console.error(`Child node not found at layer ${currentLayer}, position ${index}`);
+        return null;
+      }
       
-      parentNode.children.push(childNode);
+      // Update node with task information
+      childNode.query = task.subtask;
+      childNode.focus = task.focus;
       
-      if (currentLayer >= maxDepth) {
+      if (currentLayer >= maxDepth - 1) {
         // Leaf agent - execute directly
-        const response = await this.executeLeafAgent(task, goal, childNode, executionLog);
+        const response = await this.executeLeafAgent(task, goal, childNode, executionTracking, openaiClient);
         return response;
       } else {
         // Intermediate agent - can delegate further
         const response = await this.executeIntermediateAgent(
-          task, goal, currentLayer, maxDepth, maxBranching, childNode, executionLog
+          task, goal, currentLayer, maxDepth, maxBranching, childNode, executionTracking, openaiClient
         );
         return response;
       }
@@ -224,11 +420,15 @@ Each subtask should be specific and focused on a different aspect of the problem
     return Promise.all(childPromises);
   }
 
-  async executeLeafAgent(task, goal, treeNode, executionLog) {
+  async executeLeafAgent(task, goal, treeNode, executionTracking, openaiClient) {
     try {
       console.log(`Leaf agent executing: ${task.subtask}`);
       
-      const completion = await openai.chat.completions.create({
+      // Mark as currently executing
+      treeNode.currentlyExecuting = true;
+      executionTracking.currentlyExecuting = treeNode.path;
+      
+      const completion = await openaiClient.chat.completions.create({
         model: "gpt-4o", 
         messages: [
           {
@@ -250,13 +450,21 @@ Provide concrete, actionable insights that will be valuable when synthesized wit
 
       const response = completion.choices[0].message.content;
       treeNode.response = response;
+      
+      // Mark as executed
+      treeNode.executed = true;
+      treeNode.currentlyExecuting = false;
+      executionTracking.executedAgents++;
+      executionTracking.executionPath.push(treeNode.path);
+      
       console.log(`Leaf agent completed task`);
       
       // Log leaf agent execution
-      executionLog.agents.push({
+      executionTracking.agents.push({
         layer: treeNode.layer,
         position: treeNode.position,
         type: 'leaf',
+        path: treeNode.path,
         task: task,
         response: response,
         delegated: false
@@ -424,9 +632,30 @@ app.post('/api/session', (req, res) => {
 
 app.post('/api/query', async (req, res) => {
   try {
-    const { sessionId, query, depth = 3, length = 3 } = req.body;
-    const result = await engine.processQuery(sessionId, query, depth, length);
+    const { sessionId, query, depth = 3, length = 3, modifier = 'flat', apiKey = null } = req.body;
+    const result = await engine.processQuery(sessionId, query, depth, length, modifier, apiKey);
     res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// New endpoint for real-time execution status
+app.get('/api/execution/:sessionId', (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const execution = engine.activeExecutions.get(sessionId);
+    
+    if (!execution) {
+      return res.status(404).json({ error: 'Execution not found' });
+    }
+    
+    res.json({
+      currentlyExecuting: execution.currentlyExecuting,
+      executedAgents: execution.executedAgents,
+      totalPossibleAgents: execution.totalPossibleAgents,
+      executionPath: execution.executionPath
+    });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

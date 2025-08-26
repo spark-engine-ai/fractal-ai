@@ -7,6 +7,7 @@ class FractalEngineUI {
         this.initializeElements();
         this.setupEventListeners();
         this.updateAgentCount();
+        this.updateModifierPreview();
         
         // Initialize with chat tab active
         this.showTab('chat');
@@ -41,7 +42,16 @@ class FractalEngineUI {
             consoleTabBtn: document.getElementById('consoleTabBtn'),
             consoleView: document.getElementById('consoleView'),
             consoleContent: document.getElementById('consoleContent'),
-            clearConsoleBtn: document.getElementById('clearConsoleBtn')
+            clearConsoleBtn: document.getElementById('clearConsoleBtn'),
+            apiKeyInput: document.getElementById('apiKeyInput'),
+            executionStats: document.getElementById('executionStats'),
+            executedCount: document.getElementById('executedCount'),
+            totalCount: document.getElementById('totalCount'),
+            modifierPreview: document.getElementById('modifierPreview'),
+            dropdownBtn: document.getElementById('dropdownBtn'),
+            dropdownMenu: document.getElementById('dropdownMenu'),
+            dropdownArrow: document.getElementById('dropdownArrow'),
+            selectedModifier: document.getElementById('selectedModifier')
         };
     }
 
@@ -83,6 +93,7 @@ class FractalEngineUI {
             
             this.elements.depthValue.textContent = e.target.value;
             this.updateAgentCount();
+            this.updateModifierPreview();
             if (!this.elements.nodeView.classList.contains('hidden')) {
                 this.createAgentFractal();
             }
@@ -103,20 +114,24 @@ class FractalEngineUI {
             
             this.elements.lengthValue.textContent = e.target.value;
             this.updateAgentCount();
+            this.updateModifierPreview();
             if (!this.elements.nodeView.classList.contains('hidden')) {
                 this.createAgentFractal();
             }
         });
+
+        // Custom dropdown event listeners
+        this.setupCustomDropdown();
+        this.setupTooltips();
     }
 
     updateAgentCount() {
         const depth = parseInt(this.elements.depthSlider.value);
         const length = parseInt(this.elements.lengthSlider.value);
+        const modifier = this.getCurrentModifier();
         
-        let totalAgents = 0;
-        for (let layer = 0; layer < depth; layer++) {
-            totalAgents += Math.pow(length, layer);
-        }
+        const layerCounts = this.calculateModifierLayerCounts(depth, length, modifier);
+        const totalAgents = layerCounts.reduce((sum, count) => sum + count, 0);
         
         this.elements.agentCount.textContent = totalAgents;
         
@@ -131,14 +146,204 @@ class FractalEngineUI {
             this.elements.agentCount.style.color = '';
             this.elements.agentCount.title = '';
         }
+        
+        this.updateModifierPreview();
     }
 
     calculateAgents(depth, length) {
-        let totalAgents = 0;
-        for (let layer = 0; layer < depth; layer++) {
-            totalAgents += Math.pow(length, layer);
+        const modifier = this.getCurrentModifier();
+        const layerCounts = this.calculateModifierLayerCounts(depth, length, modifier);
+        return layerCounts.reduce((sum, count) => sum + count, 0);
+    }
+
+    calculateModifierLayerCounts(depth, length, modifier) {
+        const layerCounts = [];
+        
+        switch (modifier) {
+            case 'flat':
+                for (let layer = 0; layer < depth; layer++) {
+                    layerCounts.push(Math.pow(length, layer));
+                }
+                break;
+                
+            case 'subtract':
+                // Starts at base length, decreases each layer to 1
+                for (let layer = 0; layer < depth; layer++) {
+                    if (layer === 0) {
+                        layerCounts.push(1); // Root layer
+                    } else {
+                        const agentsInLayer = Math.max(1, Math.round(length - ((length - 1) * (layer - 1) / (depth - 2))));
+                        const parentCount = layerCounts[layer - 1];
+                        layerCounts.push(parentCount * agentsInLayer);
+                    }
+                }
+                break;
+                
+            case 'add':
+                // Starts small, increases to base length in final layer
+                for (let layer = 0; layer < depth; layer++) {
+                    if (layer === 0) {
+                        layerCounts.push(1); // Root layer
+                    } else {
+                        const agentsInLayer = Math.max(1, Math.round(1 + ((length - 1) * (layer - 1) / (depth - 2))));
+                        const parentCount = layerCounts[layer - 1];
+                        layerCounts.push(parentCount * agentsInLayer);
+                    }
+                }
+                break;
+                
+            case 'shrink_divided':
+                // First layer = base length, each layer = base / layer number
+                for (let layer = 0; layer < depth; layer++) {
+                    if (layer === 0) {
+                        layerCounts.push(1); // Root layer
+                    } else {
+                        const agentsInLayer = Math.max(1, Math.round(length / layer));
+                        const parentCount = layerCounts[layer - 1];
+                        layerCounts.push(parentCount * agentsInLayer);
+                    }
+                }
+                break;
+                
+            case 'grow_divided':
+                // Opposite of shrink_divided, ending at base length
+                for (let layer = 0; layer < depth; layer++) {
+                    if (layer === 0) {
+                        layerCounts.push(1); // Root layer
+                    } else {
+                        const reverseLayer = depth - layer;
+                        const agentsInLayer = layer === depth - 1 ? length : Math.max(1, Math.round(length / reverseLayer));
+                        const parentCount = layerCounts[layer - 1];
+                        layerCounts.push(parentCount * agentsInLayer);
+                    }
+                }
+                break;
+                
+            default:
+                // Fallback to flat
+                for (let layer = 0; layer < depth; layer++) {
+                    layerCounts.push(Math.pow(length, layer));
+                }
         }
-        return totalAgents;
+        
+        return layerCounts;
+    }
+
+    updateModifierPreview() {
+        const depth = parseInt(this.elements.depthSlider.value);
+        const length = parseInt(this.elements.lengthSlider.value);
+        const modifier = this.getCurrentModifier();
+        
+        const layerCounts = this.calculateModifierLayerCounts(depth, length, modifier);
+        this.elements.modifierPreview.textContent = `Pattern: [${layerCounts.join(', ')}]`;
+    }
+
+    getCurrentModifier() {
+        return this.currentModifier || 'flat';
+    }
+
+    setupCustomDropdown() {
+        this.currentModifier = 'flat';
+        this.isDropdownOpen = false;
+        
+        // Toggle dropdown
+        this.elements.dropdownBtn.addEventListener('click', () => {
+            this.toggleDropdown();
+        });
+        
+        // Handle option selection
+        const options = document.querySelectorAll('.dropdown-option');
+        options.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.selectModifier(option.dataset.value);
+                this.closeDropdown();
+            });
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!this.elements.dropdownBtn.contains(e.target) && !this.elements.dropdownMenu.contains(e.target)) {
+                this.closeDropdown();
+            }
+        });
+    }
+    
+    toggleDropdown() {
+        if (this.isDropdownOpen) {
+            this.closeDropdown();
+        } else {
+            this.openDropdown();
+        }
+    }
+    
+    openDropdown() {
+        this.isDropdownOpen = true;
+        this.elements.dropdownMenu.classList.remove('hidden');
+        this.elements.dropdownArrow.style.transform = 'rotate(180deg)';
+    }
+    
+    closeDropdown() {
+        this.isDropdownOpen = false;
+        this.elements.dropdownMenu.classList.add('hidden');
+        this.elements.dropdownArrow.style.transform = 'rotate(0deg)';
+    }
+    
+    selectModifier(value) {
+        this.currentModifier = value;
+        
+        const modifierData = {
+            flat: { name: 'Flat', icon: this.getIconSVG('flat') },
+            add: { name: 'Add', icon: this.getIconSVG('add') },
+            subtract: { name: 'Subtract', icon: this.getIconSVG('subtract') },
+            grow_divided: { name: 'Grow Divided', icon: this.getIconSVG('grow_divided') },
+            shrink_divided: { name: 'Shrink Divided', icon: this.getIconSVG('shrink_divided') }
+        };
+        
+        const selected = modifierData[value] || modifierData.flat;
+        
+        // Update button display
+        this.elements.dropdownBtn.querySelector('svg').outerHTML = selected.icon;
+        this.elements.selectedModifier.textContent = selected.name;
+        
+        // Update calculations and 3D view
+        this.updateAgentCount();
+        this.updateModifierPreview();
+        if (!this.elements.nodeView.classList.contains('hidden')) {
+            this.createAgentFractal();
+        }
+    }
+    
+    getIconSVG(modifier) {
+        const icons = {
+            flat: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-line"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 18m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M18 6m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M7.5 16.5l9 -9" /></svg>',
+            add: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-code-plus"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 12h6" /><path d="M12 9v6" /><path d="M6 19a2 2 0 0 1 -2 -2v-4l-1 -1l1 -1v-4a2 2 0 0 1 2 -2" /><path d="M18 19a2 2 0 0 0 2 -2v-4l1 -1l-1 -1v-4a2 2 0 0 0 -2 -2" /></svg>',
+            subtract: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-code-minus"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 12h6" /><path d="M6 19a2 2 0 0 1 -2 -2v-4l-1 -1l1 -1v-4a2 2 0 0 1 2 -2" /><path d="M18 19a2 2 0 0 0 2 -2v-4l1 -1l-1 -1v-4a2 2 0 0 0 -2 -2" /></svg>',
+            grow_divided: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-arrows-maximize"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M16 4l4 0l0 4" /><path d="M14 10l6 -6" /><path d="M8 20l-4 0l0 -4" /><path d="M4 20l6 -6" /><path d="M16 20l4 0l0 -4" /><path d="M14 14l6 6" /><path d="M8 4l-4 0l0 4" /><path d="M4 4l6 6" /></svg>',
+            shrink_divided: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-arrows-minimize"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 9l4 0l0 -4" /><path d="M3 3l6 6" /><path d="M5 15l4 0l0 4" /><path d="M3 21l6 -6" /><path d="M19 9l-4 0l0 -4" /><path d="M15 9l6 -6" /><path d="M19 15l-4 0l0 4" /><path d="M15 15l6 6" /></svg>'
+        };
+        return icons[modifier] || icons.flat;
+    }
+    
+    setupTooltips() {
+        const infoIcons = document.querySelectorAll('.info-icon');
+        
+        infoIcons.forEach(icon => {
+            const container = icon.parentElement;
+            const tooltip = container.querySelector('.tooltip-popup');
+            let hoverTimeout;
+            
+            icon.addEventListener('mouseenter', () => {
+                hoverTimeout = setTimeout(() => {
+                    tooltip.classList.remove('hidden');
+                }, 1500); // 1.5 second delay
+            });
+            
+            icon.addEventListener('mouseleave', () => {
+                clearTimeout(hoverTimeout);
+                tooltip.classList.add('hidden');
+            });
+        });
     }
 
     async createNewSession() {
@@ -187,7 +392,16 @@ class FractalEngineUI {
         try {
             const depth = parseInt(this.elements.depthSlider.value);
             const length = parseInt(this.elements.lengthSlider.value);
+            const apiKey = this.elements.apiKeyInput.value.trim() || null;
 
+            // Show execution stats
+            const totalPossible = this.calculateAgents(depth, length);
+            this.elements.totalCount.textContent = totalPossible;
+            this.elements.executedCount.textContent = '0';
+            this.elements.executionStats.classList.remove('hidden');
+
+            const modifier = this.getCurrentModifier();
+            
             const response = await fetch('/api/query', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -195,7 +409,9 @@ class FractalEngineUI {
                     sessionId: this.sessionId,
                     query: message,
                     depth,
-                    length
+                    length,
+                    modifier,
+                    apiKey
                 })
             });
 
@@ -218,7 +434,10 @@ class FractalEngineUI {
                     this.addMessage('agent', data.response);
                 }
                 
-                this.updateStatus(`Processed with ${data.depth} layers, ${data.length} agents per layer`);
+                // Update execution stats
+                this.elements.executedCount.textContent = data.executedAgents || 1;
+                
+                this.updateStatus(`Processed: ${data.executedAgents || 1} of ${data.totalPossibleAgents || totalPossible} agents executed`);
                 
                 // Add to console if fractal was used
                 if (data.executionLog) {
@@ -419,7 +638,8 @@ class FractalEngineUI {
             <div class="summary mb-3">
                 <p class="text-sm text-gray-300">${executionLog.summary || 'Fractal processing completed'}</p>
                 <div class="text-xs text-gray-500 mt-1">
-                    Layers: ${executionLog.maxDepth} | Branching: ${executionLog.maxBranching} | Total Agents: ${executionLog.totalAgents || 'Unknown'}
+                    Max Layers: ${executionLog.maxDepth} | Max Branching: ${executionLog.maxBranching} | 
+                    Executed: ${executionLog.executedAgents || 0} / ${executionLog.totalPossibleAgents || 0} agents
                 </div>
             </div>
             
@@ -508,8 +728,90 @@ class FractalEngineUI {
         if (!this.scene) {
             this.init3DFractal();
         }
-        this.create3DFractal(tree);
+        
+        // Only create new fractal if we don't have one or if it's a different structure
+        if (!this.fractalGroup || this.needsNewFractal(tree)) {
+            this.create3DFractal(tree);
+        } else {
+            // Just update the existing fractal with new execution states
+            this.updateFractalStates(tree);
+        }
+        
         this.updateNodeInfo(tree);
+    }
+
+    needsNewFractal(tree) {
+        if (!this.fractalGroup || !this.lastTreeStructure) return true;
+        
+        // Check if structure changed (depth, branching factor)
+        const currentStructure = this.getTreeStructure(tree);
+        const lastStructure = this.lastTreeStructure;
+        
+        return currentStructure.depth !== lastStructure.depth || 
+               currentStructure.maxBranching !== lastStructure.maxBranching;
+    }
+
+    getTreeStructure(tree) {
+        const getMaxDepth = (node) => {
+            if (!node.children || node.children.length === 0) return node.layer;
+            return Math.max(...node.children.map(child => getMaxDepth(child)));
+        };
+        
+        const getMaxBranching = (node) => {
+            let maxBranching = node.children ? node.children.length : 0;
+            if (node.children) {
+                for (const child of node.children) {
+                    maxBranching = Math.max(maxBranching, getMaxBranching(child));
+                }
+            }
+            return maxBranching;
+        };
+        
+        return {
+            depth: getMaxDepth(tree) + 1,
+            maxBranching: getMaxBranching(tree)
+        };
+    }
+
+    updateFractalStates(tree) {
+        // Recursively update node states without recreating geometry
+        this.updateNodeState(tree);
+    }
+
+    updateNodeState(node) {
+        const sphere = this.nodeObjects.get(node.id);
+        if (sphere) {
+            // Update material based on execution state
+            let nodeColor, opacity;
+            if (node.executed) {
+                nodeColor = 0x00ff00; // Bright green for executed
+                opacity = 1.0;
+                // Remove from execution animations if it was animating
+                this.executionAnimations.delete(node.id);
+                sphere.scale.setScalar(1.0); // Reset scale
+            } else if (node.currentlyExecuting) {
+                nodeColor = 0xffffff; // White for currently executing
+                opacity = 1.0;
+                // Add to execution animations
+                this.executionAnimations.set(node.id, {
+                    sphere: sphere,
+                    originalScale: 1.0,
+                    time: 0
+                });
+            } else {
+                nodeColor = node.layer === 0 ? 0x8b5cf6 : this.getLayerColor(node.layer);
+                opacity = 0.3; // Dim for unexecuted
+            }
+            
+            sphere.material.color.setHex(nodeColor);
+            sphere.material.opacity = opacity;
+            sphere.material.emissive.setHex(node.currentlyExecuting ? 0x333333 : 0x000000);
+        }
+        
+        // Recursively update children
+        if (node.children) {
+            node.children.forEach(child => this.updateNodeState(child));
+        }
     }
 
     showDemoFractal() {
@@ -530,6 +832,10 @@ class FractalEngineUI {
         
         const depth = parseInt(this.elements.depthSlider.value);
         const length = parseInt(this.elements.lengthSlider.value);
+        const modifier = this.getCurrentModifier();
+        
+        // Get layer counts based on modifier
+        const layerCounts = this.calculateModifierLayerCounts(depth, length, modifier);
         
         // Create center node
         const centerGeometry = new THREE.SphereGeometry(0.15, 8, 6);
@@ -537,17 +843,25 @@ class FractalEngineUI {
         const centerNode = new THREE.Mesh(centerGeometry, centerMaterial);
         this.fractalGroup.add(centerNode);
         
-        // Create fractal branches layer by layer
+        // Create fractal branches layer by layer using modifier pattern
         const nodePositions = [{ pos: new THREE.Vector3(0, 0, 0), layer: 0 }];
         
         for (let layer = 1; layer < depth; layer++) {
             const parentNodes = nodePositions.filter(n => n.layer === layer - 1);
             const radius = layer * 1.5;
             
-            parentNodes.forEach(parent => {
-                for (let i = 0; i < length; i++) {
+            // Calculate agents per parent node for this layer
+            const totalAgentsThisLayer = layerCounts[layer];
+            const agentsPerParent = Math.ceil(totalAgentsThisLayer / parentNodes.length);
+            
+            parentNodes.forEach((parent, parentIndex) => {
+                const startIndex = parentIndex * agentsPerParent;
+                const endIndex = Math.min(startIndex + agentsPerParent, totalAgentsThisLayer);
+                const numChildrenForThisParent = endIndex - startIndex;
+                
+                for (let i = 0; i < numChildrenForThisParent; i++) {
                     // Distribute nodes evenly around parent
-                    const angle = (i / length) * 2 * Math.PI;
+                    const angle = (i / Math.max(1, numChildrenForThisParent)) * 2 * Math.PI;
                     const phi = (Math.random() - 0.5) * Math.PI * 0.6; // Random elevation
                     
                     const x = parent.pos.x + radius * Math.cos(phi) * Math.cos(angle);
@@ -755,25 +1069,57 @@ toggleInfoBox() {
         
         this.fractalGroup = new THREE.Group();
         this.nodeObjects = new Map();
+        this.executionAnimations = new Map();
+        
+        // Store the tree structure for comparison
+        this.lastTreeStructure = this.getTreeStructure(tree);
         
         this.createFractalNode(tree, new THREE.Vector3(0, 0, 0), 1.0);
         
         this.scene.add(this.fractalGroup);
+        
+        // Start execution animation if needed
+        this.animateExecution();
     }
 
     createFractalNode(node, position, scale) {
         const geometry = new THREE.SphereGeometry(0.3 * scale, 16, 16);
+        
+        // Determine node color and state
+        let nodeColor, opacity;
+        if (node.executed) {
+            nodeColor = 0x00ff00; // Bright green for executed
+            opacity = 1.0;
+        } else if (node.currentlyExecuting) {
+            nodeColor = 0xffffff; // White for currently executing
+            opacity = 1.0;
+        } else {
+            nodeColor = node.layer === 0 ? 0x8b5cf6 : this.getLayerColor(node.layer);
+            opacity = 0.3; // Dim for unexecuted
+        }
+        
         const material = new THREE.MeshPhongMaterial({
-            color: node.layer === 0 ? 0x8b5cf6 : this.getLayerColor(node.layer),
+            color: nodeColor,
             transparent: true,
-            opacity: 0.8
+            opacity: opacity,
+            emissive: node.currentlyExecuting ? 0x333333 : 0x000000
         });
         
         const sphere = new THREE.Mesh(geometry, material);
         sphere.position.copy(position);
+        sphere.userData = { node: node }; // Store node reference
         
         this.fractalGroup.add(sphere);
         this.nodeObjects.set(node.id, sphere);
+        
+        // Add pulsing animation for currently executing nodes
+        if (node.currentlyExecuting) {
+            this.executionAnimations.set(node.id, {
+                sphere: sphere,
+                originalScale: scale,
+                time: 0
+            });
+        }
         
         if (node.children && node.children.length > 0) {
             const radius = 2.0 * scale;
@@ -803,6 +1149,20 @@ toggleInfoBox() {
         }
     }
 
+    animateExecution() {
+        // Animate currently executing nodes
+        this.executionAnimations.forEach((animation, nodeId) => {
+            animation.time += 0.05;
+            const pulseFactor = 1 + 0.3 * Math.sin(animation.time * 4);
+            animation.sphere.scale.setScalar(pulseFactor);
+            
+            // Update glow effect
+            animation.sphere.material.emissive.setHex(
+                Math.sin(animation.time * 3) > 0 ? 0x666666 : 0x333333
+            );
+        });
+    }
+
     getLayerColor(layer) {
         const colors = [0x8b5cf6, 0x3b82f6, 0x10b981, 0xf59e0b, 0xef4444, 0xec4899];
         return colors[layer % colors.length];
@@ -814,6 +1174,9 @@ toggleInfoBox() {
         if (this.fractalGroup && !this.isDragging) {
             this.fractalGroup.rotation.y += 0.005;
         }
+        
+        // Update execution animations
+        this.animateExecution();
         
         this.renderer.render(this.scene, this.camera);
     }
@@ -868,10 +1231,11 @@ toggleInfoBox() {
         // Inline code
         html = html.replace(/`([^`]+)`/g, '<code style="background:#4a5568;color:#63b3ed;padding:2px 4px;border-radius:3px;">$1</code>');
         
-        // Headers
-        html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:20px;font-weight:bold;color:#f7fafc;margin:12px 0 6px;">$1</h1>');
-        html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:18px;font-weight:bold;color:#f7fafc;margin:10px 0 5px;">$1</h2>');
+        // Headers (process from most specific to least specific to avoid conflicts)
+        html = html.replace(/^#### (.+)$/gm, '<h4 style="font-size:14px;font-weight:bold;color:#f7fafc;margin:6px 0 3px;">$1</h4>');
         html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:16px;font-weight:bold;color:#f7fafc;margin:8px 0 4px;">$1</h3>');
+        html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:18px;font-weight:bold;color:#f7fafc;margin:10px 0 5px;">$1</h2>');
+        html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:20px;font-weight:bold;color:#f7fafc;margin:12px 0 6px;">$1</h1>');
         
         // Bold
         html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong style="font-weight:bold;">$1</strong>');
