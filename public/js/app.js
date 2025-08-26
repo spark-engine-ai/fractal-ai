@@ -1008,7 +1008,7 @@ toggleInfoBox() {
     }
 
     showThreeJsError() {
-        this.elements.nodeInfo.innerHTML = `
+        this.elements.nodeInfoContent.innerHTML = `
             <h3 class="font-semibold mb-2 text-red-400">3D View Error</h3>
             <p class="text-sm text-gray-400 mb-2">Unable to initialize 3D graphics</p>
             <p class="text-xs text-gray-500 mb-2">Three.js may not be loaded properly</p>
@@ -1185,7 +1185,7 @@ toggleInfoBox() {
         const totalNodes = this.countNodes(tree);
         const maxDepth = this.getMaxDepth(tree);
         
-        this.elements.nodeInfo.innerHTML = `
+        this.elements.nodeInfoContent.innerHTML = `
             <h3 class="font-semibold mb-2">3D Fractal Tree</h3>
             <p class="text-sm text-gray-400 mb-2">Total Agents: ${totalNodes}</p>
             <p class="text-sm text-gray-400 mb-2">Max Depth: ${maxDepth}</p>
