@@ -110,13 +110,41 @@ Root Agent: Synthesizes all perspectives into comprehensive response
 
 ### Agent Limits:
 - **Maximum agents per session**: 4,100
-- **Recommended starting values**: Depth 3, Length 3 (up to 13 agents)
+- **Default starting values**: Depth 3, Length 3 (up to 13 agents)
 - **Performance consideration**: Higher settings create exponentially more processing
 
 ### Fractal Processing:
 - Only activates for complex queries requiring specialized analysis
 - Simple queries receive direct responses for efficiency
 - Agent count is dynamic based on actual task complexity
+
+### Modifiers:
+Modifiers control how agents are distributed across fractal layers, allowing for different growth patterns beyond the default flat structure.
+
+**Available Modifier Types:**
+
+- **Flat** *(Default)*: Every layer has the same number of agents
+  - Example: Depth 3, Length 3 → [1, 3, 9] agents per layer
+  
+- **Subtract**: Starts at maximum agents and decreases each layer until reaching 1
+  - Promotes broad initial analysis with focused deeper layers
+  
+- **Add**: Starts small and increases until final layer matches base length
+  - Promotes focused initial analysis with broader final synthesis
+  
+- **Shrink Divided**: Each layer equals base length divided by layer number
+  - Example: Length 8 → [8, 4, 3, 2, 1] agents per layer
+  
+- **Grow Divided**: Opposite of Shrink Divided, ending at base length
+  - Example: Length 8, Depth 6 → [1, 2, 2, 3, 4, 8] agents per layer
+
+**Usage Tips:**
+- **Flat**: Best for balanced, consistent analysis across all layers
+- **Subtract**: Ideal for complex problems requiring broad initial exploration
+- **Add**: Perfect for tasks needing focused start with comprehensive conclusion
+- **Shrink/Grow Divided**: Useful for specialized analysis patterns
+
+All modifiers respect the 4,100 agent limit and ensure minimum 1 agent per layer.
 
 ![Console Agent Layers](./public/images/prev-3.jpg)
 *Console view showing detailed agent execution across fractal layers*
