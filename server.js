@@ -377,7 +377,7 @@ Each subtask should be specific and focused on a different aspect of the problem
         executionTracking.executedAgents++;
         executionTracking.executionPath.push(treeNode.path);
         
-        console.log("Root agent responding directly");
+        console.log("Root agent decided not to create more agents - responding directly");
         return directResponse;
       }
       
@@ -492,11 +492,11 @@ Provide concrete, actionable insights that will be valuable when synthesized wit
     }
   }
 
-  async executeIntermediateAgent(task, goal, currentLayer, maxDepth, maxBranching, treeNode, executionLog) {
+  async executeIntermediateAgent(task, goal, currentLayer, maxDepth, maxBranching, treeNode, executionLog, openaiClient) {
     try {
       console.log(`Intermediate agent at layer ${currentLayer} executing: ${task.subtask}`);
       
-      const completion = await openai.chat.completions.create({
+      const completion = await openaiClient.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
@@ -528,18 +528,25 @@ Current layer: ${currentLayer}, Max depth: ${maxDepth}`
         console.log(`Intermediate agent delegating ${args.tasks.length} subtasks`);
         
         const childResults = await this.executeFractalLayer(
-          args.tasks, goal, currentLayer + 1, maxDepth, maxBranching, treeNode, executionLog
+          args.tasks, goal, currentLayer + 1, maxDepth, maxBranching, treeNode, executionLog, openaiClient
         );
         
         // Synthesize child results  
-        const synthesizedResult = await this.synthesizeResults(childResults, task.subtask, goal, executionLog);
+        const synthesizedResult = await this.synthesizeResults(childResults, task.subtask, goal, executionLog, openaiClient);
         treeNode.response = synthesizedResult;
+        
+        // Mark intermediate agent as executed and log it
+        treeNode.executed = true;
+        treeNode.currentlyExecuting = false;
+        executionLog.executedAgents++;
+        executionLog.executionPath.push(treeNode.path);
         
         // Log intermediate agent
         executionLog.agents.push({
           layer: currentLayer,
           position: treeNode.position,
           type: 'intermediate',
+          path: treeNode.path,
           task: task,
           response: synthesizedResult,
           delegated: true
@@ -553,10 +560,28 @@ Current layer: ${currentLayer}, Max depth: ${maxDepth}`
           position: treeNode.position
         };
       } else {
-        // Direct response
+        // Direct response - decided not to create more agents
         const directResult = message.content;
         treeNode.response = directResult;
-        console.log(`Intermediate agent responding directly`);
+        
+        // Mark intermediate agent as executed and count it
+        treeNode.executed = true;
+        treeNode.currentlyExecuting = false;
+        executionLog.executedAgents++;
+        executionLog.executionPath.push(treeNode.path);
+        
+        console.log(`Intermediate agent at layer ${currentLayer} decided not to create more agents - responding directly`);
+        
+        // Log intermediate agent that chose direct response
+        executionLog.agents.push({
+          layer: currentLayer,
+          position: treeNode.position,
+          type: 'intermediate',
+          path: treeNode.path,
+          task: task,
+          response: directResult,
+          delegated: false
+        });
         
         return {
           subtask: task.subtask,
@@ -581,7 +606,7 @@ Current layer: ${currentLayer}, Max depth: ${maxDepth}`
     }
   }
 
-  async synthesizeResults(childResults, originalQuery, goal, executionLog = null) {
+  async synthesizeResults(childResults, originalQuery, goal, executionLog = null, openaiClient = openai) {
     try {
       console.log(`Synthesizing ${childResults.length} results`);
       
@@ -589,7 +614,7 @@ Current layer: ${currentLayer}, Max depth: ${maxDepth}`
         `Subtask: ${r.subtask}\nFocus: ${r.focus}\nResult: ${r.result}`
       ).join('\n\n');
       
-      const completion = await openai.chat.completions.create({
+      const completion = await openaiClient.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {

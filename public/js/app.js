@@ -357,29 +357,46 @@ class FractalEngineUI {
                 body: JSON.stringify({ goal })
             });
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
             this.sessionId = data.sessionId;
             this.updateStatus(`Session created with goal: ${goal}`);
-            this.hideWelcomeScreen();
-            this.elements.chatMessages.innerHTML = ''; // Clear any existing content
             
-            this.addMessage('system', `New session started with goal: "${goal}"`);
+            // Only hide welcome screen and show system message when explicitly creating session via button
+            if (!this.isAutoCreatingSession) {
+                this.hideWelcomeScreen();
+                this.elements.chatMessages.innerHTML = ''; // Clear any existing content
+                this.addMessage('system', `New session started with goal: "${goal}"`);
+            }
         } catch (error) {
             this.updateStatus('Error creating session');
             console.error('Session creation error:', error);
+            this.sessionId = null; // Ensure sessionId is null on error
         }
     }
 
     async sendMessage() {
-        if (this.isProcessing || !this.sessionId) {
-            if (!this.sessionId) {
-                this.addMessage('system', 'Please create a new session first.');
-            }
-            return;
-        }
+        if (this.isProcessing) return;
 
         const message = this.elements.chatInput.value.trim();
         if (!message) return;
+
+        // Auto-create session if none exists
+        if (!this.sessionId) {
+            this.isAutoCreatingSession = true;
+            await this.createNewSession();
+            this.isAutoCreatingSession = false;
+            if (!this.sessionId) {
+                this.addMessage('system', 'Failed to create session. Please try again.');
+                return;
+            }
+        }
+
+        // Hide welcome screen when sending first message
+        this.hideWelcomeScreen();
 
         this.elements.chatInput.value = '';
         this.addMessage('user', message);
@@ -394,11 +411,17 @@ class FractalEngineUI {
             const length = parseInt(this.elements.lengthSlider.value);
             const apiKey = this.elements.apiKeyInput.value.trim() || null;
 
-            // Show execution stats
+            // Show execution stats (if elements exist)
             const totalPossible = this.calculateAgents(depth, length);
-            this.elements.totalCount.textContent = totalPossible;
-            this.elements.executedCount.textContent = '0';
-            this.elements.executionStats.classList.remove('hidden');
+            if (this.elements.totalCount) {
+                this.elements.totalCount.textContent = totalPossible;
+            }
+            if (this.elements.executedCount) {
+                this.elements.executedCount.textContent = '0';
+            }
+            if (this.elements.executionStats) {
+                this.elements.executionStats.classList.remove('hidden');
+            }
 
             const modifier = this.getCurrentModifier();
             
@@ -434,8 +457,10 @@ class FractalEngineUI {
                     this.addMessage('agent', data.response);
                 }
                 
-                // Update execution stats
-                this.elements.executedCount.textContent = data.executedAgents || 1;
+                // Update execution stats (if element exists)
+                if (this.elements.executedCount) {
+                    this.elements.executedCount.textContent = data.executedAgents || 1;
+                }
                 
                 this.updateStatus(`Processed: ${data.executedAgents || 1} of ${data.totalPossibleAgents || totalPossible} agents executed`);
                 
@@ -627,7 +652,7 @@ class FractalEngineUI {
         }
         
         const logEntry = document.createElement('div');
-        logEntry.className = 'border border-gray-600 rounded-lg p-4 bg-fractal-gray';
+        logEntry.className = 'border-1 border-b-3 border-[#c2e2f8] rounded-lg p-4 bg-fractal-gray';
         
         logEntry.innerHTML = `
             <div class="flex items-center justify-between mb-3">
@@ -637,7 +662,7 @@ class FractalEngineUI {
             
             <div class="summary mb-3">
                 <p class="text-sm text-gray-300">${executionLog.summary || 'Fractal processing completed'}</p>
-                <div class="text-xs text-gray-500 mt-1">
+                <div class="text-xs text-gray-500 mt-1 pb-6">
                     Max Layers: ${executionLog.maxDepth} | Max Branching: ${executionLog.maxBranching} | 
                     Executed: ${executionLog.executedAgents || 0} / ${executionLog.totalPossibleAgents || 0} agents
                 </div>
@@ -668,7 +693,7 @@ class FractalEngineUI {
         
         return log.agents.map(agent => {
             const taskHtml = agent.task ? `
-                <div class="bg-fractal-dark p-2 rounded text-xs mb-2">
+                <div class="bg-fractal-dark p-2 rounded-md text-xs mb-2" style="margin-bottom:6px;">
                     <strong>Task:</strong> ${agent.task.subtask || 'Root query'}<br>
                     ${agent.task.focus ? `<strong>Focus:</strong> ${agent.task.focus}` : ''}
                 </div>
@@ -680,7 +705,7 @@ class FractalEngineUI {
             }
                 
             return `
-                <div class="border-l-2 border-fractal-blue pl-3 mb-3">
+                <div class="border-1 border-b-2 border-[#c2e2f8] p-3 pl-6 mb-6 m-4">
                     <div class="text-sm font-semibold mb-1">
                         Layer ${agent.layer} - Agent ${agent.position} 
                         <span class="text-xs text-gray-400">(${agent.type || 'unknown'})</span>
@@ -1257,7 +1282,10 @@ toggleInfoBox() {
     }
 
     updateStatus(message) {
-        this.elements.statusDisplay.textContent = message;
+        if (this.elements.statusDisplay) {
+            this.elements.statusDisplay.textContent = message;
+        }
+        console.log('Status:', message);
     }
 
     showLoading(show) {
