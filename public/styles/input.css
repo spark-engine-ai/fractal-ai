@@ -82,4 +82,53 @@
   .chat-bubble blockquote {
     @apply border-l-2 border-gray-500 pl-2 italic;
   }
+  
+  /* Quantum accordion styling */
+  .quantum-accordion {
+    @apply bg-gray-800 rounded-lg border border-gray-600 mt-3;
+  }
+  
+  .quantum-accordion-header {
+    @apply p-3 cursor-pointer hover:bg-gray-700 transition-colors flex items-center justify-between;
+  }
+  
+  .quantum-accordion-content {
+    @apply overflow-hidden transition-all duration-300;
+    max-height: 0;
+  }
+  
+  .quantum-accordion.open .quantum-accordion-content {
+    max-height: 1000px;
+    @apply border-t border-gray-600;
+  }
+  
+  .quantum-layer {
+    @apply border-b border-gray-700 last:border-b-0;
+  }
+  
+  .quantum-layer-header {
+    @apply p-3 cursor-pointer hover:bg-gray-750 transition-colors flex items-center justify-between text-sm font-medium;
+  }
+  
+  .quantum-layer-content {
+    @apply overflow-hidden transition-all duration-200;
+    max-height: 0;
+  }
+  
+  .quantum-layer.open .quantum-layer-content {
+    max-height: 500px;
+    @apply p-3 pt-0 bg-gray-900;
+  }
+  
+  .quantum-agent {
+    @apply mb-3 last:mb-0 text-xs;
+  }
+  
+  .quantum-agent-header {
+    @apply text-fractal-blue font-semibold mb-1;
+  }
+  
+  .quantum-agent-content {
+    @apply text-gray-300 bg-gray-800 p-2 rounded;
+  }
 }

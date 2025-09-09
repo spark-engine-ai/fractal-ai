@@ -1,0 +1,6 @@
+# Data folder for fractal engine persistence
+# This folder stores:
+# - /chats: Individual chat sessions with console logs
+# - /projects: Complete project files with all settings  
+# - /functions: Custom function definitions
+# - /configs: Importable/exportable configuration files

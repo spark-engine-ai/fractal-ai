@@ -1,0 +1,104 @@
+[
+  {
+    "id": "delegate_fractal_tasks",
+    "name": "delegate_fractal_tasks", 
+    "description": "Delegate complex tasks to multiple specialized agents in the fractal system",
+    "enabled": true,
+    "builtin": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object", 
+            "properties": {
+              "subtask": {
+                "type": "string",
+                "description": "Specific subtask to delegate to a child agent"
+              },
+              "focus": {
+                "type": "string",
+                "description": "The specific aspect or angle this subtask should focus on"
+              }
+            },
+            "required": ["subtask", "focus"]
+          },
+          "description": "Array of 1-8 subtasks to delegate to child agents"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why this task needs to be broken down into subtasks"
+        }
+      },
+      "required": ["tasks", "reason"]
+    }
+  },
+  {
+    "id": "web_search",
+    "name": "web_search",
+    "description": "Search the web for current information",
+    "enabled": false,
+    "builtin": false,
+    "parameters": {
+      "type": "object", 
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Search query to execute"
+        },
+        "num_results": {
+          "type": "integer",
+          "description": "Number of results to return (1-10)",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 5
+        }
+      },
+      "required": ["query"]
+    }
+  },
+  {
+    "id": "file_operations",
+    "name": "file_operations",
+    "description": "Read, write, or manipulate files on the system",
+    "enabled": false,
+    "builtin": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "operation": {
+          "type": "string", 
+          "enum": ["read", "write", "append", "delete", "list"],
+          "description": "File operation to perform"
+        },
+        "path": {
+          "type": "string",
+          "description": "File path to operate on"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content to write (for write/append operations)"
+        }
+      },
+      "required": ["operation", "path"]
+    }
+  },
+  {
+    "id": "calculate",
+    "name": "calculate", 
+    "description": "Perform mathematical calculations",
+    "enabled": false,
+    "builtin": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "expression": {
+          "type": "string",
+          "description": "Mathematical expression to evaluate"
+        }
+      },
+      "required": ["expression"]
+    }
+  }
+]

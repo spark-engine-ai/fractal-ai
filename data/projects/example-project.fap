@@ -1,0 +1,35 @@
+{
+  "projectName": "Example Fractal Project",
+  "version": "1.0.0",
+  "created": "2025-01-01T00:00:00.000Z",
+  "modified": "2025-01-01T00:00:00.000Z",
+  "settings": {
+    "fractalParams": {
+      "depth": 3,
+      "length": 3, 
+      "modifier": "flat"
+    },
+    "sessionGoal": "General AI assistance",
+    "apiKey": null
+  },
+  "enabledFunctions": [
+    "delegate_fractal_tasks"
+  ],
+  "customFunctions": [],
+  "chats": [
+    {
+      "id": "chat-1",
+      "name": "Main Chat",
+      "created": "2025-01-01T00:00:00.000Z",
+      "messages": [],
+      "consoleLogs": [],
+      "executionTrees": []
+    }
+  ],
+  "currentChatId": "chat-1",
+  "metadata": {
+    "totalQueries": 0,
+    "totalAgentsExecuted": 0,
+    "averageDepthUsed": 0
+  }
+}

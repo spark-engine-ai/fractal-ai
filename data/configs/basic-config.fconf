@@ -1,0 +1,18 @@
+{
+  "configName": "Basic Configuration",
+  "version": "1.0.0",
+  "type": "fractal_config",
+  "created": "2025-01-01T00:00:00.000Z",
+  "settings": {
+    "fractalParams": {
+      "depth": 3,
+      "length": 3,
+      "modifier": "flat"
+    },
+    "sessionGoal": "General AI assistance"
+  },
+  "enabledFunctions": [
+    "delegate_fractal_tasks"
+  ],
+  "customFunctions": []
+}

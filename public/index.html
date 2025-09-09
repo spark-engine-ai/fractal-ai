@@ -8,69 +8,515 @@
 </head>
 <body class="bg-fractal-dark text-white h-screen overflow-hidden">
 
-<style>
-  .hide-scrollbar::-webkit-scrollbar { display: none; }
-  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+<!-- Startup Project Selection Modal (Updated) -->
+<div id="startupModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+  <div class="bg-fractal-gray border border-gray-600 rounded-lg mx-4" style="width: 70vw;">
+    
+    <!-- Header -->
+    <div class="p-4 border-b border-gray-600">
+      <h2 class="text-lg font-semibold text-white">Fractal Engine</h2>
+      <p class="text-sm text-gray-400">Select or create a project</p>
+    </div>
+    
+    <!-- Content -->
+    <div class="p-4 space-y-4">
+      
+      <!-- Create New Project -->
+      <div class="bg-fractal-dark border border-gray-600 rounded p-4">
+        <h3 class="text-sm font-medium text-white mb-4">Create New Project</h3>
+        <div class="space-y-4">
+          <div>
+            <input type="text" id="newProjectName" placeholder="Project Name" 
+                   class="w-full p-3 bg-fractal-gray border border-gray-500 rounded text-white text-sm placeholder-gray-400 focus:border-fractal-blue focus:outline-none">
+          </div>
+          <div>
+            <textarea id="newProjectGoal" placeholder="Initial Goal (Optional)" 
+                      class="w-full p-3 bg-fractal-gray border border-gray-500 rounded text-white text-sm placeholder-gray-400 focus:border-fractal-blue focus:outline-none resize-none" 
+                      rows="2"></textarea>
+          </div>
+          <button id="createNewProjectBtn" class="w-full btn-secondary bg-green-600 hover:bg-green-700 py-2">
+            Create Project
+          </button>
+        </div>
+      </div>
+      
+      <!-- Recent Projects -->
+      <div class="bg-fractal-dark border border-gray-600 rounded p-4">
+        <h3 class="text-sm font-medium text-white mb-3">Recent Projects</h3>
+        <div class="bg-fractal-gray border border-gray-500 rounded p-3 max-h-40 overflow-y-auto">
+          <div id="existingProjectsList" class="space-y-2">
+            <div class="text-sm text-gray-500 text-center py-4">
+              No projects found
+            </div>
+          </div>
+        </div>
+        
+        <!-- Import -->
+        <div class="mt-3 pt-3 border-t border-gray-600">
+          <input type="file" id="importProjectFileStartup" accept=".fractal" class="hidden">
+          <button id="importProjectBtnStartup" class="btn-secondary text-sm py-1 px-3">
+            Import Project
+          </button>
+          <label class="ml-3">
+            <input type="checkbox" id="decompileProjectStartup" class="w-3 h-3 mr-1">
+            <span class="text-xs text-gray-400">Decompile</span>
+          </label>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</div>
 
-  .control-panel {
-    border-radius: 0.5rem;
-    border: 1px solid rgb(75 85 99 / 1);
-    background-color: rgb(26 26 26 / 1);
-    padding: 1rem;
-  }
+<!-- Main Application -->
+<div class="h-full flex flex-col" id="mainApp" style="display: none;">
 
-  .cp-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    user-select: none;
-  }
+  <!-- Desktop-style Header -->
+  <div class="bg-gray-900 border-b border-gray-600 px-6 py-3 flex-shrink-0">
+    <div class="flex items-center justify-between">
+      <!-- Left side - Logo and Project info -->
+      <div class="flex items-center space-x-6">
+        <!-- Logo -->
+        <div class="flex items-center space-x-3 w-8 h-8">
+          <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            <img src="./images/logo.PNG" alt="Fractal Engine" class="w-8 h-8" style="width:20px; height:20px;" height="20" width="20"onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          </div>
+        </div>
+        <!-- Project info -->
+        <div class="border-l flex gap-4 border-gray-600 pl-6" style="transform:translateX(7px)">
+          <div class="text-xs font-medium text-blue-400">Fractal Engine v0.1.0 - </div>
+          <div id="currentProjectTitle" class="text-xs font-medium text-blue-400" style="transform:translateX(4px);">No Project</div>
+        </div>
+      </div>
 
-  .cp-content {
-    overflow: hidden;
-    max-height: 0;
-    padding-top: 0;        /* collapsed = no padding */
-    transition: max-height 200ms ease, padding-top 200ms ease;
-  }
-
-.control-panel[data-open="true"] .cp-content {
-  max-height: 1000px;
-  padding-top: 1rem;   /* space between header & first item */
-  display: flex;
-  flex-direction: column;
-  gap: 0rem;           /* vertical spacing between children */
-}
-
-
-  .cp-toggle svg {
-    transition: transform 150ms ease;
-  }
-  .control-panel[data-open="true"] .cp-toggle svg {
-    transform: rotate(180deg);
-  }
-</style>
-
-    <div class="h-full flex">
-        <!-- Left Sidebar - Controls -->
-    <div class="w-80 bg-fractal-gray border-r border-gray-600">
-      <div class="p-6 space-y-6 flex-1 min-h-0">
-        <div class="flex items-center mb-6 gap-4">
-          <img src="./images/logo.PNG" alt="Fractal Engine Logo" width="24" height="24" style="transform: translate(0px, 4px)" class="mt-2 rounded">
-          <h1 class="text-md font-bold text-white mt-2" style="transform: translate(5px, 4px)">Fractal Engine</h1>
+      <!-- Right side - Menu buttons -->
+      <div class="flex hidden items-center space-x-6">
+        <!-- File Menu -->
+        <div class="relative">
+          <button id="fileMenuBtn" class="px-6 py-2 text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-all">File</button>
+          <div id="fileMenuDropdown" class="hidden absolute top-full right-0 mt-2 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 min-w-48">
+            <div class="py-2">
+              <button id="newProjectMenuBtn" class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">New Project</button>
+              <button id="saveProjectMenuBtn" class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">Save Project</button>
+              <div class="border-t border-gray-600 my-1"></div>
+              <button id="exportProjectMenuBtn" class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">Export Project...</button>
+              <button id="importProjectMenuBtn" class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">Import Project...</button>
+              <input type="file" id="importProjectFileMenu" accept=".fractal" class="hidden">
+            </div>
+          </div>
         </div>
 
-        <!-- This is the scroller -->
-<div class="flex-1 overflow-y-auto pr-6 pb-8 space-y-4 hide-scrollbar" style="height:88vh;">
+        <!-- Settings Menu -->
+        <div class="relative">
+          <button id="settingsMenuBtn" class="px-6 py-2 text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-all">Settings</button>
+          <div id="settingsMenuDropdown" class="hidden absolute top-full right-0 mt-2 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 min-w-48">
+            <div class="py-2">
+              <button id="preferencesMenuBtn" class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">Preferences</button>
+              <button id="aboutMenuBtn" class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors">About</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <!-- Session Controls -->
+  <!-- Main Layout -->
+  <div class="flex flex-1 h-full overflow-hidden">
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col h-full overflow-hidden">
+      <!-- Tab Bar -->
+      <div class="bg-fractal-dark border-b border-gray-600 p-4 flex-shrink-0">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-semibold">Workspace</h2>
+          <div class="flex space-x-4">
+            <button id="chatTabBtn" class="btn-secondary active">Chat</button>
+            <button id="consoleTabBtn" class="btn-secondary">Console</button>
+            <button id="functionsTabBtn" class="btn-secondary">Functions</button>
+            <button id="nodeTabBtn" class="btn-secondary">3D View</button>
+            <button id="clearChatBtn" class="hidden btn-secondary">Clear Chat</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat View -->
+      <div id="chatView" class="flex-1 flex flex-col">
+        <div id="chatMessages" class="overflow-y-auto p-6 space-y-4" style="height: 75vh;">
+          <!-- Welcome Screen -->
+          <div id="welcomeScreen" class="flex flex-col items-center justify-center h-full text-center">
+            <div class="mb-8">
+              <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-4 mx-auto shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                  <path d="M2 12l10 5 10-5"/>
+                </svg>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-300 mb-2">Welcome to Fractal Engine</h3>
+              <p class="text-gray-500 mb-6 max-w-md">Your AI cognitive intelligence platform for complex reasoning and creative exploration.</p>
+              <p class="text-sm text-fractal-blue">💡 Send a message to see real fractal processing!</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Chat Input -->
+        <div class="p-4 border-t border-gray-600">
+          <div class="flex space-x-3">
+            <input type="text" id="chatInput" 
+                   placeholder="Ask me anything..." 
+                   class="flex-1 p-3 bg-fractal-dark border border-gray-500 rounded text-white focus:border-fractal-blue focus:outline-none">
+            <button id="webSearchBtn" class="hidden btn-secondary bg-blue-600 text-white px-4" title="Web Search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="21 21l-4.35-4.35"></path>
+              </svg>
+            </button>
+            <button id="sendBtn" class="btn-secondary bg-white text-white px-6">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        #terminalInput {
+          outline: none !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        
+        #terminalInput:focus {
+          outline: none !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        
+        #terminalInput::selection {
+          background: transparent !important;
+          color: inherit !important;
+        }
+        
+        #terminalInput::-moz-selection {
+          background: transparent !important;
+          color: inherit !important;
+        }
+      </style>
+      <!-- Console View -->
+      <div id="consoleView" class="flex-1 flex flex-col hidden">
+        
+        <!-- Terminal Stream View -->
+        <div id="consoleStreamView" class="bg-black rounded font-mono text-xs relative w-100" style="height: 85vh;">
+          <!-- View Toggle Buttons (floating) -->
+          <div class="absolute flex space-x-1 z-10" style="top: 8px; right: 8px;">
+            <button id="consoleToggleStream" class="p-2 bg-green-600 text-white rounded opacity-80 hover:opacity-100" title="Stream View">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-terminal-2">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M8 9l3 3l-3 3" />
+                <path d="M13 15l3 0" />
+                <path d="M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 -2h-14a2 2 0 0 1 -2 -2z" />
+              </svg>
+            </button>
+            <button id="consoleToggleExec" class="p-2 bg-gray-600 text-gray-300 rounded hover:bg-gray-500 opacity-80 hover:opacity-100" title="Exec View">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-message-chatbot">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z" />
+                <path d="M9.5 9h.01" />
+                <path d="M14.5 9h.01" />
+                <path d="M9.5 13a3.5 3.5 0 0 0 5 0" />
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Terminal Content Container (scrollable) -->
+          <div class="h-full overflow-y-auto p-4">
+            <div class="text-green-400 mb-2">
+              <span class="text-cyan-400">[SYSTEM]</span> Fractal Engine Console v3.1<br>
+              <span class="text-cyan-400">[SYSTEM]</span> Terminal initialized. Streaming mode active.<br>
+              <span class="text-gray-500">[INFO]</span> Type 'help' for available commands.
+            </div>
+            <div id="terminalStream" class="space-y-1 mb-2"></div>
+            
+            <!-- Terminal Input Line (inline with stream) -->
+            <div id="terminalInputLine" class="flex items-center py-1 bg-black">
+              <span class="text-green-400 select-none shrink-0">fractal-engine@localhost:~$</span>
+<div id="terminalInput" 
+     contenteditable="true"
+     spellcheck="false"
+     style="transform:translateX(4px)"
+     class="ml-2 flex-1 bg-black text-white border-0 font-mono caret-green-400 outline-none">
+</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Execution Folders View -->
+        <div id="consoleExecView" class="bg-black rounded font-mono text-xs relative hidden" style="height: 85vh;">
+          <!-- View Toggle Buttons (floating) -->
+          <div class="absolute flex space-x-1 z-10" style="top: 8px; right: 8px;">
+            <button id="consoleToggleStream2" class="p-2 bg-gray-600 text-gray-300 rounded hover:bg-gray-500 opacity-80 hover:opacity-100" title="Stream View">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-terminal-2">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M8 9l3 3l-3 3" />
+                <path d="M13 15l3 0" />
+                <path d="M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 -2h-14a2 2 0 0 1 -2 -2z" />
+              </svg>
+            </button>
+            <button id="consoleToggleExec2" class="p-2 bg-green-600 text-white rounded opacity-80 hover:opacity-100" title="Exec View">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-message-chatbot">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z" />
+                <path d="M9.5 9h.01" />
+                <path d="M14.5 9h.01" />
+                <path d="M9.5 13a3.5 3.5 0 0 0 5 0" />
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Execution Content Container -->
+          <div class="h-full flex flex-col">
+            <!-- Execution Output Area (scrollable) -->
+            <div id="execOutputArea" class="flex-1 overflow-y-auto p-4 pb-2">
+              <div id="consoleContent">
+                <div class="text-green-400 mb-4">
+                  <span class="text-cyan-400">[SYSTEM]</span> Execution Log View<br>
+                  <span class="text-gray-500">[INFO]</span> Detailed execution folders shown below...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Functions View -->
+      <div id="functionsView" class="flex-1 flex flex-col hidden">
+        <div class="overflow-y-auto p-6" style="height: 75vh;">
+          <div class="max-w-6xl mx-auto">
+            <!-- Header with status indicator -->
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-4">
+                <h2 class="text-2xl font-bold">Function Management</h2>
+                <div class="flex items-center gap-2">
+                  <div id="functionsStatusIndicator" class="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span id="functionsStatusText" class="text-sm text-gray-400">Functions Disabled</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-400">Functions:</span>
+                <span id="functionsCountDisplay" class="text-sm font-semibold text-fractal-blue">0</span>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <!-- Function Settings & Core Functions -->
+              <div class="space-y-6 gap-6">
+                <!-- Quick Settings Card -->
+                <div class="p-6">
+                  <h3 class="text-lg font-semibold mb-6 flex items-center gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span style="transform: translateX(5px);">Quick Settings</span>
+                  </h3>
+                  <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-fractal-dark rounded-lg">
+                      <div class="flex flex-col">
+                        <label class="text-sm font-medium text-white">Enable Functions</label>
+                        <span class="text-xs text-gray-400">Allow custom functions to be called by AI agents</span>
+                      </div>
+                      <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="functionsEnabled" class="sr-only peer">
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <hr style="margin-top:5px;margin-bottom:5px;opacity:0.6;"></hr>
+                <!-- Core Functions -->
+                <div class="p-6">
+                  <h3 class="text-lg font-semibold mb-6 flex items-center gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                      <polyline points="4,7 4,4 20,4 20,7"></polyline>
+                      <line x1="9" y1="20" x2="15" y2="20"></line>
+                      <line x1="12" y1="4" x2="12" y2="20"></line>
+                    </svg>
+                    <span style="transform: translateX(5px);">Core Functions</span>
+                  </h3>
+                  <div class="space-y-3">
+                    <div class="p-4 bg-fractal-dark rounded-lg border border-green-500/30">
+                      <div class="flex items-start justify-between mb-2">
+                        <h4 class="font-medium text-green-400">delegate_fractal_tasks</h4>
+                        <span class="px-2 py-1 text-xs bg-green-500/20 text-green-400 rounded">Built-in</span>
+                      </div>
+                      <p class="text-sm text-gray-400 mb-3">Delegate complex tasks to multiple specialized agents in the fractal system</p>
+                      <div class="text-xs text-gray-500">
+                        <strong>Parameters:</strong> tasks (array), reason (string)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+                              <hr style="margin-top:5px;margin-bottom:5px;opacity:0.6;"></hr>
+
+              <!-- Custom Functions -->
+              <div class="xl:col-span-2 space-y-6">
+                <div class="p-6">
+                  <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold flex items-center gap-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                        <path d="M12 2L22 8.5V15.5L12 22L2 15.5V8.5L12 2Z"></path>
+                        <path d="M12 22V12"></path>
+                        <path d="M22 8.5L12 12L2 8.5"></path>
+                      </svg>
+                      <span style="transform: translateX(5px);">Custom Functions</span>
+                    </h3>
+                    <div class="flex items-center gap-3">
+                      <button id="addFunctionBtn" class="btn-secondary text-sm flex items-center gap-2 px-4 py-2 hover:scale-105 transition-transform">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                          <line x1="12" y1="5" x2="12" y2="19"></line>
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span style="transform: translateX(5px);">Add Function</span>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div id="functionsList" class="space-y-3 p-8">
+                    <div class="text-center p-8 rounded-lg" style="margin:15px;">
+                      <div style="padding:20px;width:100%;">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto mb-4 text-gray-500">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                      </svg>
+                      <p class="text-gray-400 font-medium p-4 m-4 mb-2">No custom functions configured</p>
+                      <p class="text-sm text-gray-500 m-4 p-4">Click "Add Function" to create your first custom function</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <hr style="margin-top:5px;margin-bottom:5px;opacity:0.6;"></hr>
+
+                <!-- Function Library & Tools -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <!-- Import/Export -->
+                  <div class="p-6">
+                    <h3 class="text-lg font-semibold mb-6 flex items-center gap-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14,2 14,8 20,8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10,9 9,9 8,9"></polyline>
+                      </svg>
+                      <span style="transform: translateX(5px);">Function Library</span>
+                    </h3>
+                    
+                    <div class="space-y-4">
+                      <button id="exportFunctionsBtn" class="w-full btn-secondary flex items-center justify-center gap-3 px-4 py-3 hover:scale-105 transition-transform">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="7,10 12,15 17,10"></polyline>
+                          <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span style="transform: translateX(5px);">Export Functions</span>
+                      </button>
+                      
+                      <button id="importFunctionsBtn" class="w-full btn-secondary flex items-center justify-center gap-3 px-4 py-3 hover:scale-105 transition-transform">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="17,8 12,3 7,8"></polyline>
+                          <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span style="transform: translateX(5px);">Import Functions</span>
+                      </button>
+                      
+                      <input type="file" id="importFunctionsFile" accept=".json,.func" class="hidden">
+                    </div>
+                  </div>
+
+                                  <hr style="margin-top:5px;margin-bottom:5px;opacity:0.6;"></hr>
+                  <!-- Project Actions -->
+                  <div class="p-6">
+                    <h3 class="text-lg font-semibold mb-6 flex items-center gap-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"></path>
+                      </svg>
+                      <span style="transform: translateX(5px);">Project Tools</span>
+                    </h3>
+                    <div class="space-y-4">
+                      <button id="exportProjectBtn" class="w-full btn-secondary flex items-center justify-center gap-3 px-4 py-3 bg-purple-600 hover:bg-purple-700 hover:scale-105 transition-all">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="7,10 12,15 17,10"></polyline>
+                          <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span style="transform: translateX(5px);">Export Project</span>
+                      </button>
+                      
+                      <button id="importProjectBtn" class="w-full btn-secondary flex items-center justify-center gap-3 px-4 py-3 bg-purple-600 hover:bg-purple-700 hover:scale-105 transition-all">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="17,8 12,3 7,8"></polyline>
+                          <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span style="transform: translateX(5px);">Import Project</span>
+                      </button>
+                      
+                      <input type="file" id="importProjectFile" accept=".fractal" class="hidden">
+                      
+                      <div class="flex items-center gap-3 mt-4 p-3 bg-fractal-dark rounded-lg">
+                        <input type="checkbox" id="decompileProject" class="w-4 h-4 text-fractal-purple bg-fractal-dark border-gray-500 rounded focus:ring-fractal-purple">
+                        <label for="decompileProject" class="text-sm text-gray-400" style="transform:translateX(5px);">Decompile on import (separate chats)</label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node Graph View -->
+      <div id="nodeView" class="flex-1 hidden">
+        <div class="h-full bg-fractal-dark relative overflow-hidden">
+          <canvas id="nodeCanvas" class="w-full h-full"></canvas>
+          <div id="nodeInfo" class="absolute top-4 left-4 bg-fractal-gray rounded-lg border border-gray-600 max-w-sm transition-all duration-300 z-10">
+            <div class="flex items-center justify-between p-3 cursor-pointer" id="nodeInfoHeader">
+              <h3 class="font-semibold text-sm pr-4 mr-4">Agent Fractal Info</h3>
+              <button id="toggleInfoBtn" class="text-gray-400 hover:text-white text-lg pl-4 leading-none">▾</button>
+            </div>
+            <div id="nodeInfoContent" class="p-4">
+              <p class="text-sm text-gray-400">Interactive visualization will appear here when processing queries.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar - Controls -->
+    <div class="w-80 h-full" style="border:1px solid rgb(107 114 128);border-top:0px;border-bottom:0px;border-right:0px;">
+      <div class="p-4 space-y-4 overflow-y-auto" style="height: 94vh;">
+
+        <!-- Session Controls -->
         <div class="control-panel cp" data-open="true">
           <div class="cp-header flex items-center justify-between cursor-pointer select-none">
             <div class="flex items-center">
-                <div>
-                    <svg  xmlns="http://www.w3.org/2000/svg"  width="16"  height="16"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-world-plus"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20.985 12.518a9 9 0 1 0 -8.45 8.466" /><path d="M3.6 9h16.8" /><path d="M3.6 15h11.4" /><path d="M11.5 3a17 17 0 0 0 0 18" /><path d="M12.5 3a16.998 16.998 0 0 1 2.283 12.157" /><path d="M16 19h6" /><path d="M19 16v6" /></svg>
-                </div>
-                <h2 class="text-sm font-semibold" style="padding-left:5px;">Session</h2>
+              <div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-world-plus">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <path d="M20.985 12.518a9 9 0 1 0 -8.45 8.466" />
+                  <path d="M3.6 9h16.8" />
+                  <path d="M3.6 15h11.4" />
+                  <path d="M11.5 3a17 17 0 0 0 0 18" />
+                  <path d="M12.5 3a16.998 16.998 0 0 1 2.283 12.157" />
+                  <path d="M16 19h6" />
+                  <path d="M19 16v6" />
+                </svg>
+              </div>
+              <h2 class="text-sm font-semibold" style="padding-left:5px;">Session</h2>
             </div>
             <button class="cp-toggle text-gray-300 hover:text-white" aria-expanded="true" aria-controls="cp-session">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -84,18 +530,30 @@
                      placeholder="Enter your goal..."
                      class="w-full p-2 bg-fractal-dark border border-gray-500 rounded text-white text-sm">
             </div>
-            <button id="newSessionBtn" style="--tw-bg-opacity: 0.5;" class="btn-secondary w-full mt-8 bg-black hover:bg-black border-fractal-blue">New Session</button>
+            <button id="newChatBtn" style="--tw-bg-opacity: 0.5;" class="btn-secondary w-full mt-8 bg-black hover:bg-black border-fractal-blue">New Chat</button>
+            
+            <!-- Chats List -->
+            <div class="mt-4">
+              <h5 class="text-xs font-medium mb-2">Project Chats</h5>
+              <div id="chatsList" class="space-y-1 max-h-32 overflow-y-auto">
+                <div class="text-xs text-gray-500 p-2 text-center">No chats in project</div>
+              </div>
+            </div>
           </div>
         </div>
 
-                <!-- API Configuration -->
+        <!-- API Configuration -->
         <div class="control-panel cp" data-open="false">
           <div class="cp-header flex items-center justify-between cursor-pointer select-none">
             <div class="flex items-center">
-                <div>
-                    <svg  xmlns="http://www.w3.org/2000/svg"  width="16"  height="16"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-key"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z" /><path d="M15 9h.01" /></svg>                
-                </div>
-                <h2 class="text-sm font-semibold" style="padding-left:5px;">API Configuration</h2>
+              <div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-key">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z" />
+                  <path d="M15 9h.01" />
+                </svg>
+              </div>
+              <h2 class="text-sm font-semibold" style="padding-left:5px;">API Configuration</h2>
             </div>
             <button class="cp-toggle text-gray-300 hover:text-white" aria-expanded="false" aria-controls="cp-api">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -117,10 +575,25 @@
         <div class="control-panel cp" data-open="true">
           <div class="cp-header flex items-center justify-between cursor-pointer select-none">
             <div class="flex items-center">
-                <div>
-                    <svg  xmlns="http://www.w3.org/2000/svg"  width="16"  height="16"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-topology-star-3"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" /><path d="M18 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" /><path d="M10 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" /><path d="M6 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" /><path d="M18 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" /><path d="M14 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" /><path d="M22 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" /><path d="M6 12h4" /><path d="M14 12h4" /><path d="M15 7l-2 3" /><path d="M9 7l2 3" /><path d="M11 14l-2 3" /><path d="M13 14l2 3" /></svg>                
-                </div>
-                <h2 class="text-sm font-semibold" style="padding-left:5px;">Fractal Parameters</h2>
+              <div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-topology-star-3">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <path d="M10 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M18 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M10 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M6 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M18 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M14 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M22 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" />
+                  <path d="M6 12h4" />
+                  <path d="M14 12h4" />
+                  <path d="M15 7l-2 3" />
+                  <path d="M9 7l2 3" />
+                  <path d="M11 14l-2 3" />
+                  <path d="M13 14l2 3" />
+                </svg>
+              </div>
+              <h2 class="text-sm font-semibold" style="padding-left:5px;">Fractal Parameters</h2>
             </div>
             <button class="cp-toggle text-gray-300 hover:text-white" aria-expanded="true" aria-controls="cp-fractal">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -154,329 +627,547 @@
             <p class="text-xs text-gray-400">
               Total Agents: <span id="agentCount">13</span>
             </p>
+
+            <!-- Force Delegation Checkbox -->
+            <div class="mt-3">
+              <label class="flex items-center space-x-2 text-xs">
+                <input type="checkbox" id="forceDelegationCheckbox" class="rounded bg-gray-600 border-gray-500 text-orange-600 focus:ring-orange-500 focus:ring-2">
+                <span>🔴 Force Max Agents</span>
+              </label>
+              <p class="text-[10px] text-gray-500 mt-1">Forces creation of maximum agents regardless of complexity</p>
+            </div>
           </div>
         </div>
 
-        <!-- Modifiers Controls -->
-        <div class="control-panel cp" data-open="true">
+        <!-- Agent Modifiers -->
+        <div class="control-panel cp" data-open="false">
           <div class="cp-header flex items-center justify-between cursor-pointer select-none">
             <div class="flex items-center">
-                <div>
-                    <svg  xmlns="http://www.w3.org/2000/svg"  width="16"  height="16"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-adjustments-horizontal"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 6m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M4 6l8 0" /><path d="M16 6l4 0" /><path d="M8 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M4 12l2 0" /><path d="M10 12l10 0" /><path d="M17 18m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M4 18l11 0" /><path d="M19 18l1 0" /></svg>
-                </div>
-                <h2 class="text-sm font-semibold" style="padding-left:5px;">Modifiers</h2>
+              <div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-adjustments">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <path d="M4 10a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                  <path d="M6 4v4" />
+                  <path d="M6 12v8" />
+                  <path d="M10 16a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                  <path d="M12 4v10" />
+                  <path d="M12 18v2" />
+                  <path d="M16 7a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                  <path d="M18 4v1" />
+                  <path d="M18 9v11" />
+                </svg>
+              </div>
+              <h2 class="text-sm font-semibold" style="padding-left:5px;">Agent Modifiers</h2>
             </div>
-            <button class="cp-toggle text-gray-300 hover:text-white" aria-expanded="true" aria-controls="cp-modifiers">
+            <button class="cp-toggle text-gray-300 hover:text-white" aria-expanded="false" aria-controls="cp-modifiers">
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
           </div>
           <div id="cp-modifiers" class="cp-content mt-3 space-y-4">
-            <div class="relative">
-              <label class="block text-xs font-medium mb-2">Fractal Pattern</label>
-              
-              <!-- Custom Dropdown -->
-              <div id="customDropdown" class="relative">
-                <!-- Dropdown Button -->
-                <button id="dropdownBtn" class="w-full p-2 bg-fractal-dark border border-gray-500 rounded text-white text-sm flex items-center justify-between cursor-pointer hover:border-gray-400 transition-colors">
-                  <div class="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-line">
-                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                      <path d="M6 18m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-                      <path d="M18 6m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-                      <path d="M7.5 16.5l9 -9" />
-                    </svg>
-                    <span id="selectedModifier" style="margin-left:5px;">Flat</span>
-                  </div>
-                  <svg width="11" height="11" class="transition-transform" id="dropdownArrow" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+            <div class="custom-dropdown relative" id="dropdownContainer">
+              <button type="button" id="dropdownBtn" class="w-full px-3 py-2 text-left bg-fractal-dark border border-gray-500 rounded text-white text-sm flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M6 18m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                    <path d="M18 6m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                    <path d="M7.5 16.5l9 -9" />
                   </svg>
-                </button>
+                  <span id="selectedModifier">Flat</span>
+                </div>
+                <svg id="dropdownArrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor" class="transition-transform duration-200">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.23 8.29a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                </svg>
+              </button>
+              <div id="dropdownMenu" class="absolute z-50 mt-1 w-64 bg-fractal-dark border border-gray-500 rounded shadow-lg hidden">
+                
+                <!-- Flat Option -->
+                <div class="dropdown-option relative p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600" data-value="flat">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M6 18m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                        <path d="M18 6m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                        <path d="M7.5 16.5l9 -9" />
+                      </svg>
+                      <span class="text-sm">Flat</span>
+                    </div>
+                    <div class="info-icon-container relative">
+                      <svg class="info-icon text-gray-400 hover:text-white transition-colors w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 9h.01"/>
+                        <path d="M11 12h1v4h1"/>
+                      </svg>
+                      <div class="tooltip-popup absolute bottom-full right-0 mb-2 w-72 bg-gray-800 text-white text-xs rounded p-2 shadow-lg border border-gray-600 hidden">
+                        Every layer has the same number of agents. Example: [3, 3, 3]
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Add Option -->
+                <div class="dropdown-option relative p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600" data-value="add">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5v14"/>
+                        <path d="M5 12h14"/>
+                      </svg>
+                      <span class="text-sm">Add</span>
+                    </div>
+                    <div class="info-icon-container relative">
+                      <svg class="info-icon text-gray-400 hover:text-white transition-colors w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 9h.01"/>
+                        <path d="M11 12h1v4h1"/>
+                      </svg>
+                      <div class="tooltip-popup absolute bottom-full right-0 mb-2 w-72 bg-gray-800 text-white text-xs rounded p-2 shadow-lg border border-gray-600 hidden">
+                        Each layer adds one more agent than the previous. Example: [1, 2, 3]
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Subtract Option -->
+                <div class="dropdown-option relative p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600" data-value="subtract">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14"/>
+                      </svg>
+                      <span class="text-sm">Subtract</span>
+                    </div>
+                    <div class="info-icon-container relative">
+                      <svg class="info-icon text-gray-400 hover:text-white transition-colors w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 9h.01"/>
+                        <path d="M11 12h1v4h1"/>
+                      </svg>
+                      <div class="tooltip-popup absolute bottom-full right-0 mb-2 w-72 bg-gray-800 text-white text-xs rounded p-2 shadow-lg border border-gray-600 hidden">
+                        Each layer has one less agent than the previous. Example: [3, 2, 1]
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Grow Divided Option -->
+                <div class="dropdown-option relative p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600" data-value="grow_divided">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                      </svg>
+                      <span class="text-sm">Grow Divided</span>
+                    </div>
+                    <div class="info-icon-container relative">
+                      <svg class="info-icon text-gray-400 hover:text-white transition-colors w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 9h.01"/>
+                        <path d="M11 12h1v4h1"/>
+                      </svg>
+                      <div class="tooltip-popup absolute bottom-full right-0 mb-2 w-72 bg-gray-800 text-white text-xs rounded p-2 shadow-lg border border-gray-600 hidden">
+                        Complex growth pattern for specialized processing. Example: [1, 3, 7]
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Shrink Divided Option -->
+                <div class="dropdown-option relative p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600" data-value="shrink_divided">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3v6l4-4-4-4"/>
+                        <path d="M12 21v-6l-4 4 4 4"/>
+                        <path d="M3 12h6l-4-4-4 4"/>
+                        <path d="M21 12h-6l4 4 4-4"/>
+                      </svg>
+                      <span class="text-sm">Shrink Divided</span>
+                    </div>
+                    <div class="info-icon-container relative">
+                      <svg class="info-icon text-gray-400 hover:text-white transition-colors w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 9h.01"/>
+                        <path d="M11 12h1v4h1"/>
+                      </svg>
+                      <div class="tooltip-popup absolute bottom-full right-0 mb-2 w-72 bg-gray-800 text-white text-xs rounded p-2 shadow-lg border border-gray-600 hidden">
+                        Complex reduction pattern for focused processing. Example: [7, 3, 1]
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 
               </div>
             </div>
-            
-            <div id="modifierPreview" class="text-xs text-gray-400">
-              Pattern: [3, 3, 3]
+            <div id="modifierPreview" class="text-xs text-gray-400 p-2 bg-gray-800 rounded border">
+              <strong>Current:</strong> Every layer has the same number of agents.
             </div>
           </div>
         </div>
 
-                        <!-- Dropdown Menu -->
-                <div id="dropdownMenu" style="width:240px;transform:translate(1vw, -45vh);" class="absolute top-full left-0 bottom-0 mt-1 bg-fractal-dark border border-gray-500 rounded shadow-lg z-50 hidden">
-                  
-                  <!-- Flat Option -->
-                  <div class="dropdown-option relative p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600 last:border-b-0" data-value="flat">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-line">
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                          <path d="M6 18m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-                          <path d="M18 6m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-                          <path d="M7.5 16.5l9 -9" />
-                        </svg>
-                        <span class="text-sm" style="margin-left:6px;">Flat</span>
-                      </div>
-                      <div class="info-icon-container relative">
-                        <svg class="info-icon text-gray-400 hover:text-white transition-colors" xmlns="http://www.w3.org/2000/svg" width="22" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                          <path d="M12 9h.01" />
-                          <path d="M11 12h1v4h1" />
-                        </svg>
-                        <div style="width:320px" class="tooltip-popup absolute bg-black w-full bottom-full right-0 mb-2 bg-gray-800 text-white text-xs rounded-lg p-2 shadow-lg border border-gray-600 hidden">
-                          Every layer has the same number of agents. Example: [3, 3, 3]
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Add Option -->
-                  <div class="dropdown-option relative p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600 last:border-b-0" data-value="add">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-code-plus">
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                          <path d="M9 12h6" />
-                          <path d="M12 9v6" />
-                          <path d="M6 19a2 2 0 0 1 -2 -2v-4l-1 -1l1 -1v-4a2 2 0 0 1 2 -2" />
-                          <path d="M18 19a2 2 0 0 0 2 -2v-4l1 -1l-1 -1v-4a2 2 0 0 0 -2 -2" />
-                        </svg>
-                        <span class="text-sm" style="margin-left:6px;">Add</span>
-                      </div>
-                      <div class="info-icon-container relative">
-                        <svg class="info-icon text-gray-400 hover:text-white transition-colors" xmlns="http://www.w3.org/2000/svg" width="22" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                          <path d="M12 9h.01" />
-                          <path d="M11 12h1v4h1" />
-                        </svg>
-                        <div style="width:320px"  class="bg-black tooltip-popup absolute bottom-full right-0 mb-2 bg-gray-800 text-white text-xs rounded-lg p-2 shadow-lg border border-gray-600 hidden whitespace-nowrap">
-                          Starts small and increases each layer until the final layer matches the base length
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Subtract Option -->
-                  <div class="dropdown-option relative p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600 last:border-b-0" data-value="subtract">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-code-minus">
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                          <path d="M9 12h6" />
-                          <path d="M6 19a2 2 0 0 1 -2 -2v-4l-1 -1l1 -1v-4a2 2 0 0 1 2 -2" />
-                          <path d="M18 19a2 2 0 0 0 2 -2v-4l1 -1l-1 -1v-4a2 2 0 0 0 -2 -2" />
-                        </svg>
-                        <span class="text-sm" style="margin-left:6px;">Subtract</span>
-                      </div>
-                      <div class="info-icon-container relative">
-                        <svg class="info-icon text-gray-400 hover:text-white transition-colors" xmlns="http://www.w3.org/2000/svg" width="22" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                          <path d="M12 9h.01" />
-                          <path d="M11 12h1v4h1" />
-                        </svg>
-                        <div style="width:320px"  class="bg-black tooltip-popup absolute bottom-full right-0 mb-2 bg-gray-800 text-white text-xs rounded-lg p-2 shadow-lg border border-gray-600 hidden whitespace-nowrap">
-                          Starts at the maximum number of agents and gets smaller each layer until it reaches 1
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Grow Divided Option -->
-                  <div class="dropdown-option relative p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600 last:border-b-0" data-value="grow_divided">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-arrows-maximize">
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                          <path d="M16 4l4 0l0 4" />
-                          <path d="M14 10l6 -6" />
-                          <path d="M8 20l-4 0l0 -4" />
-                          <path d="M4 20l6 -6" />
-                          <path d="M16 20l4 0l0 -4" />
-                          <path d="M14 14l6 6" />
-                          <path d="M8 4l-4 0l0 4" />
-                          <path d="M4 4l6 6" />
-                        </svg>
-                        <span class="text-sm" style="margin-left:6px;">Grow Divided</span>
-                      </div>
-                      <div class="info-icon-container relative">
-                        <svg class="info-icon text-gray-400 hover:text-white transition-colors" xmlns="http://www.w3.org/2000/svg" width="22" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                          <path d="M12 9h.01" />
-                          <path d="M11 12h1v4h1" />
-                        </svg>
-                        <div style="width:320px"  class="bg-black tooltip-popup absolute bottom-full right-0 mb-2 bg-gray-800 text-white text-xs rounded-lg p-2 shadow-lg border border-gray-600 hidden whitespace-nowrap">
-                          The opposite of Shrink divided, ending at the base length. Example: [1, 2, 2, 3, 4, 8]
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Shrink Divided Option -->
-                  <div class="dropdown-option relative p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600 last:border-b-0" data-value="shrink_divided">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-arrows-minimize">
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                          <path d="M5 9l4 0l0 -4" />
-                          <path d="M3 3l6 6" />
-                          <path d="M5 15l4 0l0 4" />
-                          <path d="M3 21l6 -6" />
-                          <path d="M19 9l-4 0l0 -4" />
-                          <path d="M15 9l6 -6" />
-                          <path d="M19 15l-4 0l0 4" />
-                          <path d="M15 15l6 6" />
-                        </svg>
-                        <span class="text-sm" style="margin-left:6px;">Shrink Divided</span>
-                      </div>
-                      <div class="info-icon-container relative">
-                        <svg class="info-icon text-gray-400 hover:text-white transition-colors" xmlns="http://www.w3.org/2000/svg" width="22" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                          <path d="M12 9h.01" />
-                          <path d="M11 12h1v4h1" />
-                        </svg>
-                        <div style="width:320px"  class="bg-black tooltip-popup absolute bottom-full right-0 mb-2 bg-gray-800 text-white text-xs rounded-lg p-2 shadow-lg border border-gray-600 hidden whitespace-nowrap">
-                          Each layer equals base length divided by its layer number. Example: [8, 4, 3, 2, 2, 1]
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        <!-- Quantum Settings -->
+        <div class="control-panel cp" data-open="false">
+          <div class="cp-header flex items-center justify-between cursor-pointer select-none">
+            <div class="flex items-center">
+              <div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-atom">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <path d="M12 12v.01" />
+                  <path d="M19.071 4.929c-1.562 -1.562 -6 .337 -9.9 4.243c-3.905 3.905 -5.804 8.337 -4.242 9.9c1.562 1.561 6 -.338 9.9 -4.244c3.905 -3.905 5.804 -8.337 4.242 -9.9" />
+                  <path d="M4.929 4.929c-1.562 1.562 .337 6 4.243 9.9c3.905 3.905 8.337 5.804 9.9 4.242c1.561 -1.562 -.338 -6 -4.244 -9.9c-3.905 -3.905 -8.337 -5.804 -9.9 -4.242" />
+                </svg>
+              </div>
+              <h2 class="text-sm font-semibold" style="padding-left:5px;">Quantum Processing</h2>
+            </div>
+            <button class="cp-toggle text-gray-300 hover:text-white" aria-expanded="false" aria-controls="cp-quantum">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div id="cp-quantum" class="cp-content mt-3 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="quantumEnabled" class="w-4 h-4 text-fractal-purple bg-fractal-dark border-gray-500 rounded focus:ring-fractal-purple">
+                <label for="quantumEnabled" class="text-xs font-medium">Enable Quantum Processing</label>
+              </div>
+            </div>
             
+            <div id="quantumSettings" class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium mb-1">
+                  Executions: <span id="quantumValue">3</span>
+                </label>
+                <input type="range" id="quantumSlider" min="1" max="10" value="3"
+                       class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                <div class="flex justify-between text-[10px] text-gray-400 mt-1">
+                  <span>1</span><span>10</span>
+                </div>
+              </div>
+              <p class="text-xs text-gray-400">
+                Quantum processing enables parallel reality exploration for enhanced AI reasoning.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Functions -->
+        <div class="control-panel cp" data-open="false">
+          <div class="cp-header flex items-center justify-between cursor-pointer select-none">
+            <div class="flex items-center">
+              <div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-code">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <path d="M7 8l-4 4l4 4" />
+                  <path d="M17 8l4 4l-4 4" />
+                  <path d="M14 4l-4 16" />
+                </svg>
+              </div>
+              <h2 class="text-sm font-semibold" style="padding-left:5px;">Functions</h2>
+            </div>
+            <button class="cp-toggle text-gray-300 hover:text-white" aria-expanded="false" aria-controls="cp-functions">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div id="cp-functions" class="cp-content mt-3 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="sidebarFunctionsEnabled" class="w-4 h-4 text-fractal-blue bg-fractal-dark border-gray-500 rounded focus:ring-fractal-blue">
+                <label for="sidebarFunctionsEnabled" class="text-xs font-medium">Enable Functions</label>
+              </div>
+            </div>
+            <div id="functionsStatus" class="space-y-2">
+              <div class="text-xs text-gray-400">
+                <p id="functionsCount">No functions configured</p>
+              </div>
+              <button id="manageFunctionsBtn" class="btn-secondary w-full text-xs bg-fractal-blue hover:bg-blue-600">Manage Functions</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Display -->
+        <div id="statusDisplay" class="text-xs text-gray-500 p-2 bg-fractal-dark rounded border border-gray-600">
+          Ready
+        </div>
+
+      </div>
+    </div>
+
+  </div>
 </div>
 
-            </div>
-        </div>
+<!-- CSS Styles -->
+<style>
+  .control-panel {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    border: 1px solid #374151;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+  }
 
-        <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col h-full overflow-hidden">
-            <!-- Top Bar -->
-            <div class="bg-fractal-gray border-b border-gray-600 p-4 flex-shrink-0">
-                <div class="flex justify-between items-center" style="transform: translateY(3.5px)">
-                    <h2 class="text-xl font-semibold">Cognitive Interface</h2>
-                    <div class="flex space-x-4">
-                        <button id="chatTabBtn" class="btn-secondary active">Chat</button>
-                        <button id="consoleTabBtn" class="btn-secondary">Console</button>
-                        <button id="toggleViewBtn" class="btn-secondary">3D View</button>
-                        <button id="clearChatBtn" class="btn-secondary">Clear Chat</button>
-                    </div>
-                </div>
-            </div>
+  .control-panel:hover {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 1px #4f46e5;
+  }
 
-            <!-- Chat Interface -->
-            <div id="chatView" class="flex-1 flex flex-col">
-                <div id="chatMessages" class="overflow-y-auto p-6 space-y-4" style="height: 75vh;">
-                    <!-- Welcome Screen - Will be replaced when session starts -->
-                    <div id="welcomeScreen" class="flex flex-col items-center justify-center h-full text-center">
-                        <div class="flex items-center align-center justify-center mb-6 gap-4">
+  .cp-header {
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
 
-                        <img src="./images/logo.PNG" style="transform:translateX(-7.5px)" alt="Fractal Engine Logo" width="44" height="44" class="rounded-lg shadow-lg">
-                        <h1 style="font-size: 30px;" class="font-bold text-white">Fractal Engine</h1>
-                        </div>
-                        <div style="height:0.5px;opacity:0.5;background-color:white;width:20vw;margin-bottom:12px;"></div>
-                        <p class="text-md text-gray-300 mb-2">AI-Powered Cognitive Intelligence</p>
-                        <p class="text-gray-400 text-sm mb-8 max-w-md text-center w-80" style="text-align:center" >Experience recursive AI reasoning through fractal agent processing. Set your parameters and create a new session to begin.</p>
-                    </div>
-                </div>
+  .cp-content {
+    padding: 0 16px 16px;
+    display: none;
+  }
 
-                <!-- Chat Input -->
-                <div class="border-gray-600 p-4">
-                    <div class="flex space-x-4 justify-center">
-                        <input type="text" id="chatInput" 
-                               placeholder="Ask me anything..."
-                               style="width:50vw;"
-                               class="flex p-3 bg-fractal-gray border border-gray-500 rounded-lg text-white">
-                        <button id="sendBtn" class="btn-secondary bg-white text-white px-6">
- <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-arrow-up"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M18 11l-6 -6" /><path d="M6 11l6 -6" /></svg>                           
+  .control-panel[data-open="true"] .cp-content {
+    display: block;
+  }
 
-                        </button>
-                    </div>
-                </div>
-            </div>
+  .control-panel[data-open="true"] .cp-toggle svg {
+    transform: rotate(180deg);
+  }
 
-            <!-- Console Interface -->
-            <div id="consoleView" class="flex-1 flex flex-col hidden">
-                <div class="overflow-y-auto p-6" style="height: 75vh;">
-                    <div id="consoleContent" class="space-y-6">
-                        <div class="text-gray-400 text-center py-8">
-                            <p>Console logs will appear here when fractal processing occurs.</p>
-                            <p class="text-sm mt-2">Execute a complex query to see the fractal system in action.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="border-t border-gray-600 p-4">
-                    <button id="clearConsoleBtn" class="btn-secondary">Clear Console</button>
-                </div>
-            </div>
+  .cp-toggle {
+    transition: transform 0.2s ease;
+  }
 
-            <!-- Node Graph View -->
-            <div id="nodeView" class="flex-1 hidden">
-                <div class="h-full bg-fractal-dark relative overflow-hidden">
-                    <canvas id="nodeCanvas" class="w-full h-full"></canvas>
-                    <div id="nodeInfo" class="absolute top-4 left-4 bg-fractal-gray rounded-lg border border-gray-600 max-w-sm transition-all duration-300 z-10">
-                        <div class="flex items-center justify-between p-3 cursor-pointer" id="nodeInfoHeader">
-                            <h3 class="font-semibold text-sm pr-4 mr-4">Agent Fractal Info  </h3>
-                            <button id="toggleInfoBtn" class="text-gray-400 hover:text-white text-lg pl-4 leading-none">▾</button>
-                        </div>
-                        <div id="nodeInfoContent" class="p-4">
-                            <p class="text-sm text-gray-400">Interactive visualization will appear here when processing queries.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  .btn-secondary {
+    background: #374151;
+    border: 1px solid #4b5563;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-        <div class="bg-fractal-gray p-6 rounded-lg border border-gray-600">
-            <div class="flex items-center space-x-3">
-                <div class="animate-spin-slow w-6 h-6 border-2 border-fractal-blue border-t-transparent rounded-full"></div>
-                <span>Processing through fractal layers...</span>
-            </div>
-        </div>
-    </div>
+  .btn-secondary:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- Removed external markdown library - using custom parser -->
-    <script src="./js/app.js"></script>
-    <script>
+  .btn-secondary.active {
+    background: #4f46e5;
+    border-color: #4f46e5;
+  }
+
+  .btn-primary {
+    background: #4f46e5;
+    border: 1px solid #4f46e5;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .btn-primary:hover {
+    background: #4338ca;
+    border-color: #4338ca;
+  }
+
+  .custom-dropdown {
+    position: relative;
+  }
+
+  .dropdown-option:hover {
+    background-color: #374151;
+  }
+
+  /* Scrollbar styles */
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+  /* Color variables */
+  :root {
+    --fractal-dark: #0f1419;
+    --fractal-gray: #1e2328;
+    --fractal-blue: #4f46e5;
+    --fractal-green: #10b981;
+    --fractal-purple: #8b5cf6;
+  }
+
+  .bg-fractal-dark { background-color: var(--fractal-dark); }
+  .bg-fractal-gray { background-color: var(--fractal-gray); }
+  .text-fractal-blue { color: var(--fractal-blue); }
+  .text-fractal-green { color: var(--fractal-green); }
+  .text-fractal-purple { color: var(--fractal-purple); }
+  .border-fractal-blue { border-color: var(--fractal-blue); }
+  .bg-fractal-blue { background-color: var(--fractal-blue); }
+
+  /* Animation for loading */
+  .animate-spin-slow {
+    animation: spin 2s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Tooltip styles */
+  .tooltip-popup {
+    display: none;
+    position: absolute;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    z-index: 100;
+    max-width: 200px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Range slider styles */
+  input[type="range"] {
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-track {
+    background: #4b5563;
+    height: 4px;
+    border-radius: 2px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    background: #4f46e5;
+    height: 16px;
+    width: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: -6px;
+  }
+
+  input[type="range"]::-moz-range-track {
+    background: #4b5563;
+    height: 4px;
+    border-radius: 2px;
+    border: none;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    background: #4f46e5;
+    height: 16px;
+    width: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+  }
+</style>
+
+<!-- Scripts and Control Panel Logic -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="./js/app.js?v=3.1"></script>
+<script>
   (function () {
     const panels = document.querySelectorAll('.cp');
     panels.forEach((panel, idx) => {
       const header = panel.querySelector('.cp-header');
-      const toggleBtn = panel.querySelector('.cp-toggle');
       const content = panel.querySelector('.cp-content');
-
-      // Ensure ARIA wiring if missing
-      if (!content.id) content.id = `cp-${idx}`;
-      toggleBtn?.setAttribute('aria-controls', content.id);
-
-      function setOpen(open) {
-        panel.dataset.open = open ? 'true' : 'false';
-        toggleBtn?.setAttribute('aria-expanded', String(open));
-        // If you want pixel-perfect max-height, uncomment below:
-        // content.style.maxHeight = open ? content.scrollHeight + 'px' : '0px';
+      const toggle = panel.querySelector('.cp-toggle');
+      
+      if (header && content && toggle) {
+        header.addEventListener('click', () => {
+          const isOpen = panel.getAttribute('data-open') === 'true';
+          panel.setAttribute('data-open', !isOpen);
+          
+          if (!isOpen) {
+            content.style.display = 'block';
+            toggle.style.transform = 'rotate(180deg)';
+          } else {
+            content.style.display = 'none';
+            toggle.style.transform = 'rotate(0deg)';
+          }
+        });
+        
+        // Initialize state
+        const isOpen = panel.getAttribute('data-open') === 'true';
+        if (isOpen) {
+          content.style.display = 'block';
+          toggle.style.transform = 'rotate(180deg)';
+        } else {
+          content.style.display = 'none';
+          toggle.style.transform = 'rotate(0deg)';
+        }
       }
-
-      // Initialize based on data-open
-      setOpen(panel.dataset.open !== 'false');
-
-      // Click anywhere on header toggles
-      header.addEventListener('click', () => {
-        const isOpen = panel.dataset.open === 'true';
-        setOpen(!isOpen);
-      });
-
-      // Keep height correct if window resizes while open (only needed if using pixel max-height)
-      // window.addEventListener('resize', () => {
-      //   if (panel.dataset.open === 'true') {
-      //     content.style.maxHeight = content.scrollHeight + 'px';
-      //   }
-      // });
+    });
+    
+    // Menu dropdown functionality
+    function setupMenuDropdown(btnId, dropdownId) {
+      const btn = document.getElementById(btnId);
+      const dropdown = document.getElementById(dropdownId);
+      
+      if (btn && dropdown) {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // Close other dropdowns
+          document.querySelectorAll('[id$="MenuDropdown"]').forEach(dd => {
+            if (dd !== dropdown) dd.classList.add('hidden');
+          });
+          dropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+          dropdown.classList.add('hidden');
+        });
+        
+        dropdown.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+      }
+    }
+    
+    // Setup menu dropdowns
+    setupMenuDropdown('fileMenuBtn', 'fileMenuDropdown');
+    setupMenuDropdown('settingsMenuBtn', 'settingsMenuDropdown');
+    
+    // Setup dropdown tooltips
+    document.querySelectorAll('.info-icon-container').forEach(container => {
+      const icon = container.querySelector('.info-icon');
+      const tooltip = container.querySelector('.tooltip-popup');
+      
+      if (icon && tooltip) {
+        icon.addEventListener('mouseenter', () => {
+          tooltip.classList.remove('hidden');
+        });
+        
+        icon.addEventListener('mouseleave', () => {
+          tooltip.classList.add('hidden');
+        });
+      }
+    });
+    
+    // Initialize Fractal Engine when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof window.FractalEngineUI !== 'undefined') {
+        window.fractalEngine = new window.FractalEngineUI();
+      }
     });
   })();
 </script>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-40">
+  <div class="bg-fractal-gray p-6 rounded-lg border border-gray-600">
+    <div class="flex items-center space-x-3">
+      <div class="animate-spin-slow w-6 h-6 border-2 border-fractal-blue border-t-transparent rounded-full"></div>
+      <span>Processing through fractal layers...</span>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
