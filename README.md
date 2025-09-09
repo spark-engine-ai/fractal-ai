@@ -15,6 +15,10 @@ A recursive fractal-based AI engine that implements cognitive intelligence throu
 - **📋 Real-time Console Logging**: Detailed execution logs showing fractal processing in action
 - **🎯 Goal-oriented Sessions**: Set specific objectives for targeted AI assistance
 - **⚡ Smart Processing**: Only activates fractal system for complex queries requiring delegation
+- **🔧 Custom Functions**: Create and manage custom AI functions with JavaScript execution support
+- **💾 Persistent Data Storage**: Automatic saving of chats, console logs, executions, and project settings
+- **🌐 Global Function Library**: Share functions across projects with individual toggle controls
+- **📈 Advanced Modifiers**: Fine-tune agent distribution patterns across fractal layers
 
 ## 🏗️ Architecture
 
@@ -123,31 +127,311 @@ Modifiers control how agents are distributed across fractal layers, allowing for
 
 **Available Modifier Types:**
 
-- **Flat** *(Default)*: Every layer has the same number of agents
-  - Example: Depth 3, Length 3 → [1, 3, 9] agents per layer
-  
-- **Subtract**: Starts at maximum agents and decreases each layer until reaching 1
-  - Promotes broad initial analysis with focused deeper layers
-  
-- **Add**: Starts small and increases until final layer matches base length
-  - Promotes focused initial analysis with broader final synthesis
-  
-- **Shrink Divided**: Each layer equals base length divided by layer number
-  - Example: Length 8 → [8, 4, 3, 2, 1] agents per layer
-  
-- **Grow Divided**: Opposite of Shrink Divided, ending at base length
-  - Example: Length 8, Depth 6 → [1, 2, 2, 3, 4, 8] agents per layer
+#### Flat (Default)
+Every layer has the same number of agents, creating consistent exponential growth.
+- **Formula**: `agents[layer] = length^layer`
+- **Example**: Depth 3, Length 3 → [1, 3, 9] agents per layer
+- **Total Agents**: 1 + 3 + 9 = 13 agents
+- **Use Case**: Balanced, consistent analysis across all layers
 
-**Usage Tips:**
-- **Flat**: Best for balanced, consistent analysis across all layers
-- **Subtract**: Ideal for complex problems requiring broad initial exploration
-- **Add**: Perfect for tasks needing focused start with comprehensive conclusion
-- **Shrink/Grow Divided**: Useful for specialized analysis patterns
+#### Subtract
+Starts at maximum agents and decreases each layer until reaching 1.
+- **Formula**: `agents[layer] = max(1, length - layer + 1)`
+- **Example**: Depth 4, Length 5 → [5, 4, 3, 2] agents per layer
+- **Total Agents**: 5 + 4 + 3 + 2 = 14 agents
+- **Use Case**: Broad initial exploration with focused deeper analysis
 
-All modifiers respect the 4,100 agent limit and ensure minimum 1 agent per layer.
+#### Add
+Starts small and increases until final layer matches base length.
+- **Formula**: `agents[layer] = min(length, layer + 1)`
+- **Example**: Depth 4, Length 5 → [1, 2, 3, 4] agents per layer
+- **Total Agents**: 1 + 2 + 3 + 4 = 10 agents
+- **Use Case**: Focused start with comprehensive final synthesis
+
+#### Shrink Divided
+Each layer equals base length divided by layer number (rounded up).
+- **Formula**: `agents[layer] = max(1, Math.ceil(length / layer))`
+- **Example**: Length 8, Depth 5 → [8, 4, 3, 2, 1] agents per layer
+- **Total Agents**: 8 + 4 + 3 + 2 + 1 = 18 agents
+- **Use Case**: Rapid focus narrowing for targeted analysis
+
+#### Grow Divided
+Opposite of Shrink Divided, starting small and ending at base length.
+- **Formula**: `agents[layer] = max(1, Math.ceil(length / (depth - layer + 1)))`
+- **Example**: Length 8, Depth 5 → [1, 2, 2, 3, 8] agents per layer
+- **Total Agents**: 1 + 2 + 2 + 3 + 8 = 16 agents
+- **Use Case**: Building complexity toward comprehensive final analysis
+
+**Mathematical Constraints:**
+- **Agent Limit**: All modifiers respect the 4,100 total agent limit
+- **Minimum Agents**: Every layer has at least 1 agent
+- **Layer Calculation**: Only counts layers that actually delegate (have child agents)
+- **Dynamic Adjustment**: Agent counts adjust based on actual delegation decisions
+
+**Performance Comparison:**
+```
+Configuration: Depth 4, Length 4
+
+Flat:           [1, 4, 16, 64]  = 85 agents
+Subtract:       [4, 3, 2, 1]    = 10 agents  
+Add:            [1, 2, 3, 4]    = 10 agents
+Shrink Divided: [4, 2, 2, 1]    = 9 agents
+Grow Divided:   [1, 2, 2, 4]    = 9 agents
+```
+
+All modifiers ensure minimum 1 agent per layer and respect the 4,100 agent session limit.
 
 ![Console Agent Layers](./public/images/prev-3.jpg)
 *Console view showing detailed agent execution across fractal layers*
+
+## 🔧 Custom Functions System
+
+The Fractal Engine includes a powerful custom functions system that allows you to extend AI capabilities with your own functions and JavaScript code execution.
+
+### Function Types
+
+**Available Function Types:**
+- **function**: Standard OpenAI function calling format
+- **python_code**: Execute Python code snippets (requires Python environment)
+- **web_search**: Search the web for current information
+- **file_operations**: Read, write, and manipulate files
+- **data_analysis**: Analyze and process data sets
+- **api_calls**: Make HTTP requests to external APIs
+
+### Creating Functions
+
+1. **Navigate to Functions Tab**: Click the "Functions" tab in the interface
+2. **Add New Function**: Click "Add Function" button
+3. **Fill Function Details**:
+   - **Name**: Unique function identifier
+   - **Description**: What the function does
+   - **Type**: Choose from available function types
+   - **Parameters**: Define input parameters (JSON Schema format)
+   - **JavaScript Code** (Optional): Add custom JavaScript execution
+
+### JavaScript Code Support
+
+Functions can include optional JavaScript code that executes alongside the function call:
+
+```javascript
+// Example: Data processing function
+function processData(inputData) {
+    const processed = inputData
+        .filter(item => item.value > 0)
+        .map(item => ({
+            ...item,
+            processed: true,
+            timestamp: new Date().toISOString()
+        }));
+    
+    console.log(`Processed ${processed.length} items`);
+    return processed;
+}
+
+// Return result to the AI system
+return processData(parameters.data);
+```
+
+**JavaScript Features:**
+- Full ES6+ syntax support
+- Access to function parameters via `parameters` object
+- Console logging for debugging
+- Return values passed back to AI system
+- File system access for data persistence
+
+### Global vs Local Functions
+
+**Local Functions:**
+- Created within a specific project
+- Only available in that project
+- Can be edited and deleted
+- Stored in project-specific settings
+
+**Global Functions:**
+- Available across all projects
+- Stored in `/functions/` directory with individual folders
+- JavaScript files saved to `/functions/scripts/`
+- Cannot be edited from project interface (for consistency)
+- Project-level toggle controls for enabling/disabling
+
+### Function Management
+
+**Function Cards Display:**
+- **Status Indicator**: Green checkmark when enabled, unchecked when disabled
+- **Function Name**: Click card to toggle enable/disable
+- **Type Badges**: 
+  - `GLOBAL` (purple): Function available across projects
+  - `LOCAL` (blue): Project-specific function
+  - `JS` (yellow): Function includes JavaScript code
+- **Action Buttons** (Local functions only):
+  - **Edit**: Modify function details and code
+  - **Delete**: Remove function from project
+
+**Auto-Save Functionality:**
+- All function changes are automatically saved
+- Toggle states persist across sessions
+- JavaScript code is saved to appropriate directories
+- Project settings maintain function enable/disable states
+
+### File Structure
+
+```
+/functions/
+├── scripts/                    # JavaScript execution files
+│   ├── my_function.js         # Generated from function JS code
+│   └── data_processor.js      # Another function's JS code
+├── {functionId-1}/            # Individual function folders
+│   └── metadata.json          # Function configuration
+├── {functionId-2}/
+│   └── metadata.json
+└── ...
+```
+
+## 💾 Data Persistence & Storage
+
+The Fractal Engine automatically saves all your data to ensure nothing is lost between sessions.
+
+### What Gets Saved
+
+**Chat Data:**
+- Complete conversation history with timestamps
+- Message content with markdown formatting
+- User queries and AI responses
+- Associated execution metadata
+
+**Console Logs:**
+- Real-time agent execution logs
+- Layer-by-layer processing details
+- Agent status updates and completion states
+- Performance metrics and timing data
+
+**Execution Records:**
+- Complete fractal processing trees
+- Agent delegation decisions and reasoning
+- Individual agent responses and synthesis results
+- 3D visualization data for replay
+
+**Project Settings:**
+- Fractal parameters (depth, length, modifiers)
+- Session goals and descriptions
+- Function enable/disable states
+- UI preferences and configurations
+
+### Storage Structure
+
+```
+/data/
+└── projects/
+    └── {projectId}/
+        ├── metadata.json          # Project info and settings
+        ├── chats/                 # Chat conversations
+        │   └── {chatId}.json     # Individual chat data
+        ├── console-logs/          # Execution logs
+        │   └── {executionId}.json # Detailed execution data
+        └── settings.json          # Project-specific settings
+```
+
+### Auto-Save Features
+
+- **Real-time Saving**: Changes saved immediately as they occur
+- **Background Persistence**: No user intervention required
+- **Cross-session Continuity**: Resume exactly where you left off
+- **Data Integrity**: Atomic writes prevent data corruption
+- **Backup Redundancy**: Multiple save points for critical data
+
+## 📊 Console Logging & Execution Tracking
+
+The Console tab provides detailed insights into the fractal AI processing system.
+
+### Live Execution Status
+
+When fractal processing is active, the console shows:
+
+**Live Status Box:**
+- ⚡ Processing indicator with animation
+- Real-time agent status updates
+- Progress tracking (completed/total agents)
+- Individual agent focus areas and completion states
+
+### Execution Logs
+
+**Execution Entries:**
+- **Timestamp**: When the execution started
+- **Query Preview**: The original user question
+- **Agent Count**: Total number of agents created
+- **Status**: Processing, Completed, or Failed
+- **Expandable Details**: Click to view full execution tree
+
+### Detailed Agent Information
+
+**Agent Cards Show:**
+- **Agent Focus**: Specialized task or domain
+- **Layer Information**: Which fractal layer the agent operates on
+- **Execution Status**: Pending → Running → Completed
+- **Response Content**: Full agent responses and reasoning
+- **Synthesis Results**: How agent outputs were combined
+
+### Execution Tree Visualization
+
+**Hierarchical Display:**
+- **Layer Organization**: Agents grouped by fractal layers
+- **Parent-Child Relationships**: Clear delegation chains
+- **Status Indicators**: Visual progress tracking
+- **Expandable Sections**: Drill down into specific agent details
+- **Response Content**: Full text of agent outputs
+
+### Performance Metrics
+
+**Timing Information:**
+- Start and completion timestamps
+- Individual agent execution times
+- Layer processing durations
+- Total query processing time
+- Performance optimization insights
+
+## 🎥 3D Fractal Visualization
+
+The 3D View tab provides an interactive Three.js visualization of the fractal agent processing tree.
+
+### Real-time Visualization
+
+**Dynamic Tree Building:**
+- Nodes appear as agents are created and executed
+- Color-coded status indicators (pending, running, completed)
+- Animated connections showing parent-child relationships
+- Real-time updates during fractal processing
+
+### Interactive Features
+
+**Camera Controls:**
+- **Mouse**: Rotate view around the fractal tree
+- **Scroll**: Zoom in/out for detailed or overview perspectives
+- **Auto-rotation**: Optional continuous rotation for presentation mode
+- **Reset View**: Return to default camera position
+
+**Node Information:**
+- **Hover Effects**: Highlight nodes and connections on mouse over
+- **Click Details**: Display agent information in overlay
+- **Layer Grouping**: Visual separation of fractal layers
+- **Status Colors**: 
+  - Gray: Pending/queued agents
+  - Blue: Currently executing agents
+  - Green: Successfully completed agents
+  - Red: Failed or errored agents
+
+### Visualization Patterns
+
+**Tree Structure:**
+- **Root Node**: Single central node representing the root agent
+- **Layer Spacing**: Vertical separation between fractal layers
+- **Radial Distribution**: Child nodes arranged in circles around parents
+- **Connection Lines**: Animated lines showing delegation relationships
+
+**Performance Indicators:**
+- **Node Size**: Proportional to processing time or complexity
+- **Animation Speed**: Faster updates for quicker agent completions
+- **Tree Depth**: Visual representation of fractal recursion levels
+- **Branch Density**: Shows agent distribution patterns across modifiers
 
 ## 🎨 Technology Stack
 
@@ -160,17 +444,20 @@ All modifiers respect the 4,100 agent limit and ensure minimum 1 agent per layer
 
 ## 📡 API Reference
 
-### Create Session
+### Session Management
+
+#### Create Session
 ```http
 POST /api/session
 Content-Type: application/json
 
 {
-  "goal": "General AI assistance"
+  "goal": "General AI assistance",
+  "projectId": "uuid"
 }
 ```
 
-### Process Query
+#### Process Query
 ```http
 POST /api/query
 Content-Type: application/json
@@ -179,7 +466,118 @@ Content-Type: application/json
   "sessionId": "uuid",
   "query": "Your question here",
   "depth": 3,
-  "length": 3
+  "length": 3,
+  "modifier": "flat",
+  "force": false
+}
+```
+
+### Chat Management
+
+#### Save Chat
+```http
+POST /api/chats
+Content-Type: application/json
+
+{
+  "projectId": "uuid",
+  "chatId": "uuid", 
+  "messages": [...],
+  "goal": "Session goal",
+  "createdAt": "2023-01-01T00:00:00.000Z"
+}
+```
+
+#### Load Chat
+```http
+GET /api/chats/{projectId}/{chatId}
+```
+
+#### List Chats
+```http
+GET /api/chats/{projectId}
+```
+
+### Console Logs
+
+#### Save Execution Log
+```http
+POST /api/console-logs
+Content-Type: application/json
+
+{
+  "projectId": "uuid",
+  "executionId": "uuid",
+  "executionLog": {
+    "query": "User question",
+    "startTime": "2023-01-01T00:00:00.000Z",
+    "agents": [...],
+    "delegationReason": "Complex analysis required"
+  }
+}
+```
+
+#### Load Execution Logs
+```http
+GET /api/console-logs/{projectId}
+```
+
+### Function Management
+
+#### Save Function Script
+```http
+POST /api/functions/script
+Content-Type: application/json
+
+{
+  "functionId": "uuid",
+  "functionName": "myFunction",
+  "jsCode": "function myFunction() { ... }"
+}
+```
+
+#### Load Global Functions
+```http
+GET /api/functions/global
+```
+
+**Response:**
+```json
+{
+  "functions": [
+    {
+      "id": "uuid",
+      "name": "Function Name",
+      "description": "Function description", 
+      "type": "function",
+      "jsCode": "...",
+      "scriptPath": "/functions/scripts/function_name.js",
+      "createdAt": "2023-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+### Project Management
+
+#### Load Project Settings
+```http
+GET /api/projects/{projectId}/settings
+```
+
+#### Save Project Settings
+```http
+POST /api/projects/{projectId}/settings
+Content-Type: application/json
+
+{
+  "functions": {...},
+  "preferences": {...},
+  "fractalSettings": {
+    "depth": 3,
+    "length": 3,
+    "modifier": "flat"
+  }
 }
 ```
 
